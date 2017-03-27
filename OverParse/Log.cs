@@ -443,6 +443,8 @@ namespace OverParse
                         string targetName = parts[5];
                         string sourceName = parts[3];
                         int hitDamage = int.Parse(parts[7]);
+                        bool isJA = parts[8] == "1";
+                        bool isCritical = parts[9] == "1";
                         string attackID = parts[6];
                         string isMultiHit = parts[10];
                         string isMisc = parts[11];

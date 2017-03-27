@@ -91,6 +91,7 @@
                             <MenuItem Style="{StaticResource topmenu}" Background="Transparent" Header="Parsing">
                                 <MenuItem Style="{StaticResource submenu}" IsCheckable="True" IsChecked="True" Header="Hide enemies/NPCs" x:Name="FilterPlayers" Click="FilterPlayers_Click"/>
                                 <MenuItem Style="{StaticResource submenu}" x:Name="SeparateZanverse" IsCheckable="True" IsChecked="False" Header="Show Zanverse damage separately" Click="SeparateZanverse_Click"/>
+                                <MenuItem Style="{StaticResource submenu}" x:Name="SeparateTurret" IsCheckable="True" IsChecked="False" Header="Show Turret damage separately" Click="SeparateTurret_Click"/>
                                 <MenuItem Style="{StaticResource submenu}" Header="AIS options">
                                     <MenuItem Style="{StaticResource submenu}" x:Name="SeparateAIS" IsCheckable="True" IsChecked="False" Header="Show AIS damage separately" Click="SeparateAIS_Click"/>
                                     <Separator />

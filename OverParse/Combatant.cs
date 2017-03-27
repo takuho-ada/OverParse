@@ -17,8 +17,29 @@ namespace OverParse
         public string isTemporary;
         public List<Attack> Attacks;
         Color green;
-        public static string[] AISAttackIDs = new string[] { "119505187", "79965782", "79965783", "79965784", "80047171", "434705298", "79964675", "1460054769", "4081218683", "3298256598", "2826401717" };
-        //public static string[] AISAttackIDs = new string[] { "1756866220", "2398664728" };
+        public static string[] AISAttackIDs = new string[] {
+            "119505187" , // A.I.S rifle (Solid Vulcan)
+            "79965782"  , // A.I.S melee first attack (Photon Saber)
+            "79965783"  , // A.I.S melee second attack (Photon Saber)
+            "79965784"  , // A.I.S melee third attack (Photon Saber)
+            "80047171"  , // A.I.S dash melee (Photon Saber)
+            "434705298" , // A.I.S rockets (Photon Grenade)
+            "79964675"  , // A.I.S gap closer PA attack (Photon Rush)
+            "1460054769", // A.I.S cannon (Photon Blaster)
+            "4081218683", // A.I.S mob freezing attack (Photon Blizzard)
+            "3298256598", // A.I.S Weak Bullet
+            "2826401717", // A.I.S Area Heal
+        };
+        public static string[] TurretAttakIDs = new string[] {
+            "1852253343", // Normal Turret
+            "1358461404", // Rodos Grapple Turret
+            "2414748436", // Facility Cannon
+            "1954812953", // Photon Cannon uncharged
+            "2822784832", // Photon Cannon charged
+            "791327364" , // Binding Arrow Turret
+            "3339644659", // Photon Particle Turret
+        };
+        public static readonly string ZanverseID = "2106601422";
 
         public int Damage
         {
@@ -32,7 +53,7 @@ namespace OverParse
         {
             get
             {
-                return this.Attacks.Where(a => a.ID == "2106601422").Sum(x => x.Damage);
+                return this.Attacks.Where(a => a.ID == ZanverseID).Sum(x => x.Damage);
             }
         }
 
@@ -41,6 +62,14 @@ namespace OverParse
             get
             {
                 return this.Attacks.Where(a => AISAttackIDs.Contains(a.ID)).Sum(x => x.Damage);
+            }
+        }
+
+        public int TurretDamage
+        {
+            get
+            {
+                return this.Attacks.Where(a => TurretAttakIDs.Contains(a.ID)).Sum(x => x.Damage);
             }
         }
 
@@ -76,6 +105,14 @@ namespace OverParse
             }
         }
 
+        public bool isTurret
+        {
+            get
+            {
+                return (isTemporary == "Turret");
+            }
+        }
+
         public bool isYou
         {
             get
@@ -104,7 +141,7 @@ namespace OverParse
         {
             get
             {
-                if (this.isZanverse || this.isAIS)
+                if (this.isZanverse || this.isAIS || this.isTurret)
                     return Damage;
 
                 int temp = Damage;
@@ -112,6 +149,8 @@ namespace OverParse
                     temp -= ZanverseDamage;
                 if (Properties.Settings.Default.SeparateAIS)
                     temp -= AISDamage;
+                if (Properties.Settings.Default.SeparateTurret)
+                    temp -= TurretDamage;
                 return temp;
             }
         }

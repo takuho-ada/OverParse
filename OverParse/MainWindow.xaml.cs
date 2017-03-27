@@ -88,6 +88,7 @@ namespace OverParse
             Console.WriteLine(AutoEndEncounters.IsChecked = Properties.Settings.Default.AutoEndEncounters);
             Console.WriteLine(SetEncounterTimeout.IsEnabled = AutoEndEncounters.IsChecked);
             Console.WriteLine(SeparateZanverse.IsChecked = Properties.Settings.Default.SeparateZanverse);
+            Console.WriteLine(SeparateTurret.IsChecked = Properties.Settings.Default.SeparateTurret);
             Console.WriteLine(SeparateAIS.IsChecked = Properties.Settings.Default.SeparateAIS);
             Console.WriteLine(ClickthroughMode.IsChecked = Properties.Settings.Default.ClickthroughEnabled);
             Console.WriteLine(LogToClipboard.IsChecked = Properties.Settings.Default.LogToClipboard);
@@ -620,6 +621,27 @@ namespace OverParse
             // force resort here to neatly shuffle AIS parses back into place
             workingList.Sort((x, y) => y.ReadDamage.CompareTo(x.ReadDamage));
 
+            // make dummy turret combatant if necessary
+            if (Properties.Settings.Default.SeparateZanverse)
+            {
+                int totalTurret = workingList.Where(c => c.isAlly).Sum(x => x.TurretDamage);
+                if (totalTurret > 0)
+                {
+                    var turretHolder = new Combatant("99999998", "Turret", "Turret");
+                    foreach (Combatant c in workingList)
+                    {
+                        if (c.isAlly)
+                        {
+                            var targetAttacks = c.Attacks.Where(a => Combatant.TurretAttakIDs.Contains(a.ID)).ToList();
+                            turretHolder.Attacks.AddRange(targetAttacks);
+                            c.Attacks = c.Attacks.Except(targetAttacks).ToList();
+                        }
+                    }
+                    turretHolder.ActiveTime = elapsed;
+                    workingList.Add(turretHolder);
+                }
+            }
+
             // make dummy zanverse combatant if necessary
             if (Properties.Settings.Default.SeparateZanverse)
             {
@@ -631,7 +653,7 @@ namespace OverParse
                     {
                         if (c.isAlly)
                         {
-                            List<Attack> targetAttacks = c.Attacks.Where(a => a.ID == "2106601422").ToList();
+                            List<Attack> targetAttacks = c.Attacks.Where(a => a.ID == Combatant.ZanverseID).ToList();
                             zanverseHolder.Attacks.AddRange(targetAttacks);
                             c.Attacks = c.Attacks.Except(targetAttacks).ToList();
                         }
@@ -647,7 +669,7 @@ namespace OverParse
             // dps calcs!
             foreach (Combatant c in workingList)
             {
-                if (c.isAlly || c.isZanverse)
+                if (c.isAlly || c.isZanverse || c.isTurret)
                 {
                     c.PercentReadDPS = c.ReadDamage / (float)totalReadDamage * 100;
                 }
@@ -672,11 +694,13 @@ namespace OverParse
                         filtered = false;
                     if (c.isAlly && c.isTemporary == "AIS" && !HideAIS.IsChecked)
                         filtered = false;
+                    if (c.isTurret)
+                        filtered = false;
                     if (c.isZanverse)
                         filtered = false;
                 } else
                 {
-                    if ((c.isAlly || c.isZanverse || !FilterPlayers.IsChecked) && (c.Damage > 0))
+                    if ((c.isAlly || c.isZanverse || c.isTurret || !FilterPlayers.IsChecked) && (c.Damage > 0))
                         filtered = false;
                 }
 
@@ -849,6 +873,12 @@ namespace OverParse
         private void SeparateZanverse_Click(object sender, RoutedEventArgs e)
         {
             Properties.Settings.Default.SeparateZanverse = SeparateZanverse.IsChecked;
+            UpdateForm(null, null);
+        }
+
+        private void SeparateTurret_Click(object sender, RoutedEventArgs e)
+        {
+            Properties.Settings.Default.SeparateTurret = SeparateTurret.IsChecked;
             UpdateForm(null, null);
         }
 
