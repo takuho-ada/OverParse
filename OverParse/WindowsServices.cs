@@ -21,8 +21,7 @@ namespace OverParse
         [DllImport("USER32.DLL")]
         public static extern bool SetForegroundWindow(IntPtr hWnd);
 
-        public static string GetActiveWindowTitle()
-        {
+        public static string GetActiveWindowTitle() {
             int chars = 256;
             StringBuilder buff = new StringBuilder(chars);
             IntPtr handle = GetForegroundWindow();
@@ -31,8 +30,7 @@ namespace OverParse
             return null;
         }
 
-        public static void SetWindowExTransparent(IntPtr hwnd)
-        {
+        public static void SetWindowExTransparent(IntPtr hwnd) {
             var extendedStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
             SetWindowLong(hwnd, GWL_EXSTYLE, extendedStyle | WS_EX_TRANSPARENT);
         }

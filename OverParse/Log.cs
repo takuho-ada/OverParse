@@ -1,7 +1,9 @@
-﻿using System;
+﻿using OverParse.Models;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows;
 
@@ -25,35 +27,30 @@ namespace OverParse
         public DirectoryInfo logDirectory;
         public List<Combatant> backupCombatants = new List<Combatant>();
 
-        public Log(string attemptDirectory)
-        {
+        public Log(string attemptDirectory) {
             valid = false;
             notEmpty = false;
             running = false;
 
             bool nagMe = false;
 
-            if (Properties.Settings.Default.BanWarning)
-            {
-                MessageBoxResult panicResult = MessageBox.Show("OverParse is a 3rd-party tool that breaks PSO2's Terms and Conditions. SEGA has confirmed in an official announcement that accounts found using parsing tools may be banned.\n\nIf account safety is your first priority, do NOT use OverParse. You use this tool entirely at your own risk.\n\nWould you like to continue with setup?", "OverParse Setup", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (Properties.Settings.Default.BanWarning) {
+                MessageBoxResult panicResult = MessageBox.Show(Properties.Resources.W0001, "OverParse Setup", MessageBoxButton.YesNo, MessageBoxImage.Question);
                 if (panicResult == MessageBoxResult.No)
                     Environment.Exit(-1);
                 Properties.Settings.Default.BanWarning = false;
             }
 
-            while (!File.Exists($"{attemptDirectory}\\pso2.exe"))
-            {
+            while (!File.Exists($"{attemptDirectory}\\pso2.exe")) {
                 Console.WriteLine("Invalid pso2_bin directory, prompting for new one...");
 
-                if (nagMe)
-                {
-                    MessageBox.Show("That doesn't appear to be a valid pso2_bin directory.\n\nIf you installed the game using default settings, it will probably be in C:\\PHANTASYSTARONLINE2\\pso2_bin\\. Otherwise, find the location you installed to.", "OverParse Setup", MessageBoxButton.OK, MessageBoxImage.Warning);
-                } else
-                {
-                    MessageBox.Show("Please select your pso2_bin directory. OverParse uses this to read your damage logs.\n\nIf you picked a folder while setting up the Tweaker, choose that. Otherwise, it will be in your PSO2 installation folder.", "OverParse Setup", MessageBoxButton.OK, MessageBoxImage.Information);
+                if (nagMe) {
+                    MessageBox.Show(Properties.Resources.I0007, "OverParse Setup", MessageBoxButton.OK, MessageBoxImage.Warning);
+                } else {
+                    MessageBox.Show(Properties.Resources.I0008, "OverParse Setup", MessageBoxButton.OK, MessageBoxImage.Information);
                     nagMe = true;
                 }
-                
+
                 //WINAPI FILE DIALOGS DON'T SHOW UP FOR PEOPLE SOMETIMES AND I HAVE NO IDEA WHY, *** S I C K  M E M E ***
                 //VistaFolderBrowserDialog oDialog = new VistaFolderBrowserDialog();
                 //oDialog.Description = "Select your pso2_bin folder...";
@@ -62,13 +59,11 @@ namespace OverParse
                 System.Windows.Forms.FolderBrowserDialog dialog = new System.Windows.Forms.FolderBrowserDialog();
                 dialog.Description = "Select your pso2_bin folder. This will be inside the folder you installed PSO2 to.";
                 System.Windows.Forms.DialogResult picked = dialog.ShowDialog();
-                if (picked == System.Windows.Forms.DialogResult.OK)
-                {
+                if (picked == System.Windows.Forms.DialogResult.OK) {
                     attemptDirectory = dialog.SelectedPath;
                     Console.WriteLine($"Testing {attemptDirectory} as pso2_bin directory...");
                     Properties.Settings.Default.Path = attemptDirectory;
-                } else
-                {
+                } else {
                     Console.WriteLine("Canceled out of directory picker");
                     MessageBox.Show("OverParse needs a valid PSO2 installation to function.\nThe application will now close.", "OverParse Setup", MessageBoxButton.OK, MessageBoxImage.Information);
                     Environment.Exit(-1); // ABORT ABORT ABORT
@@ -84,48 +79,38 @@ namespace OverParse
             logDirectory = new DirectoryInfo($"{attemptDirectory}\\damagelogs");
 
             Console.WriteLine("Checking for damagelog directory override");
-            if (File.Exists($"{attemptDirectory}\\plugins\\PSO2DamageDump.cfg"))
-            {
+            if (File.Exists($"{attemptDirectory}\\plugins\\PSO2DamageDump.cfg")) {
                 Console.WriteLine("Found a config file for damage dump plugin, parsing");
                 String[] lines = File.ReadAllLines($"{attemptDirectory}\\plugins\\PSO2DamageDump.cfg");
-                foreach (String s in lines)
-                {
+                foreach (String s in lines) {
                     String[] split = s.Split('=');
                     Console.WriteLine(split[0] + "|" + split[1]);
                     if (split.Length < 2)
                         continue;
-                    if (split[0].Split('[')[0] == "directory")
-                    {
+                    if (split[0].Split('[')[0] == "directory") {
                         logDirectory = new DirectoryInfo(split[1]);
                         Console.WriteLine($"Log directory override: {split[1]}");
                     }
                 }
-            }
-            else
-            {
+            } else {
                 Console.WriteLine("No PSO2DamageDump.cfg");
             }
 
-            if (Properties.Settings.Default.LaunchMethod == "Unknown")
-            {
+            if (Properties.Settings.Default.LaunchMethod == "Unknown") {
                 Console.WriteLine("LaunchMethod prompt");
                 MessageBoxResult tweakerResult = MessageBox.Show("Do you use the PSO2 Tweaker?", "OverParse Setup", MessageBoxButton.YesNo, MessageBoxImage.Question);
                 Properties.Settings.Default.LaunchMethod = (tweakerResult == MessageBoxResult.Yes) ? "Tweaker" : "Manual";
             }
 
-            if (Properties.Settings.Default.LaunchMethod == "Tweaker")
-            {
+            if (Properties.Settings.Default.LaunchMethod == "Tweaker") {
                 bool warn = true;
-                if (logDirectory.Exists)
-                {
-                    if (logDirectory.GetFiles().Count() > 0)
-                    {
+                if (logDirectory.Exists) {
+                    if (logDirectory.GetFiles().Count() > 0) {
                         warn = false;
                     }
                 }
 
-                if (warn && Hacks.DontAsk)
-                {
+                if (warn && Hacks.DontAsk) {
                     Console.WriteLine("No damagelog warning");
                     MessageBox.Show("Your PSO2 folder doesn't contain any damagelogs. This is not an error, just a reminder!\n\nPlease turn on the Damage Parser plugin in PSO2 Tweaker (orb menu > Plugins). OverParse needs this to function. You may also want to update the plugins while you're there.", "OverParse Setup", MessageBoxButton.OK, MessageBoxImage.Information);
                     Hacks.DontAsk = true;
@@ -133,39 +118,30 @@ namespace OverParse
                     Properties.Settings.Default.Save();
                     return;
                 }
-            }
-            else if (Properties.Settings.Default.LaunchMethod == "Manual")
-            {
+            } else if (Properties.Settings.Default.LaunchMethod == "Manual") {
                 bool pluginsExist = File.Exists(attemptDirectory + "\\pso2h.dll") && File.Exists(attemptDirectory + "\\ddraw.dll") && File.Exists(attemptDirectory + "\\plugins" + "\\PSO2DamageDump.dll");
                 if (!pluginsExist)
                     Properties.Settings.Default.InstalledPluginVersion = -1;
 
                 Console.WriteLine($"Installed: {Properties.Settings.Default.InstalledPluginVersion} / Current: {pluginVersion}");
 
-                if (Properties.Settings.Default.InstalledPluginVersion < pluginVersion)
-                {
+                if (Properties.Settings.Default.InstalledPluginVersion < pluginVersion) {
                     MessageBoxResult selfdestructResult;
 
-                    if (pluginsExist)
-                    {
+                    if (pluginsExist) {
                         Console.WriteLine("Prompting for plugin update");
                         selfdestructResult = MessageBox.Show("This release of OverParse includes a new version of the parsing plugin. Would you like to update now?\n\nOverParse may behave unpredictably if you use a different version than it expects.", "OverParse Setup", MessageBoxButton.YesNo, MessageBoxImage.Question);
-                    }
-                    else
-                    {
+                    } else {
                         Console.WriteLine("Prompting for initial plugin install");
                         selfdestructResult = MessageBox.Show("OverParse needs a Tweaker plugin to recieve its damage information.\n\nThe plugin can be installed without the Tweaker, but it won't be automatically updated, and I can't provide support for this method.\n\nDo you want to try to manually install the Damage Parser plugin?", "OverParse Setup", MessageBoxButton.YesNo, MessageBoxImage.Question);
                     }
 
-                    if (selfdestructResult == MessageBoxResult.No && !pluginsExist)
-                    {
+                    if (selfdestructResult == MessageBoxResult.No && !pluginsExist) {
                         Console.WriteLine("Denied plugin install");
                         MessageBox.Show("OverParse needs the Damage Parser plugin to function.\n\nThe application will now close.", "OverParse Setup", MessageBoxButton.OK, MessageBoxImage.Information);
                         Environment.Exit(-1);
                         return;
-                    }
-                    else if (selfdestructResult == MessageBoxResult.Yes)
-                    {
+                    } else if (selfdestructResult == MessageBoxResult.Yes) {
                         Console.WriteLine("Accepted plugin install");
                         bool success = UpdatePlugin(attemptDirectory);
                         if (!pluginsExist && !success)
@@ -190,25 +166,18 @@ namespace OverParse
             fileStream.Seek(0, SeekOrigin.Begin);
             logReader = new StreamReader(fileStream);
 
-            string existingLines = logReader.ReadToEnd(); // gotta get the dummy line for current player name
-            string[] result = existingLines.Split('\n');
-            foreach (string s in result)
-            {
-                if (s == "")
-                    continue;
-                string[] parts = s.Split(',');
-                if (parts[0] == "0" && parts[3] == "YOU")
-                {
-                    Hacks.currentPlayerID = parts[2];
-                    Console.WriteLine("Found existing active player ID: " + parts[2]);
+            // gotta get the dummy line for current player name
+            foreach (var line in logReader.ReadToEnd().Split('\n').Where(l => l.Length > 0)) {
+                var dump = new DamageDump(line);
+                if (!dump.IsHeader && dump.IsCurrentPlayerIdData()) {
+                    Hacks.currentPlayerID = dump.SourceID;
+                    Console.WriteLine($"Found existing active player ID: {dump.SourceID}");
                 }
             }
         }
 
-        public bool UpdatePlugin(string attemptDirectory)
-        {
-            try
-            {
+        public bool UpdatePlugin(string attemptDirectory) {
+            try {
                 File.Copy(Directory.GetCurrentDirectory() + "\\resources\\pso2h.dll", attemptDirectory + "\\pso2h.dll", true);
                 File.Copy(Directory.GetCurrentDirectory() + "\\resources\\ddraw.dll", attemptDirectory + "\\ddraw.dll", true);
                 Directory.CreateDirectory(attemptDirectory + "\\plugins");
@@ -217,9 +186,7 @@ namespace OverParse
                 MessageBox.Show("Setup complete! A few files have been copied to your pso2_bin folder.\n\nIf PSO2 is running right now, you'll need to close it before the changes can take effect.", "OverParse Setup", MessageBoxButton.OK, MessageBoxImage.Information);
                 Console.WriteLine("Plugin install successful");
                 return true;
-            }
-            catch (Exception ex)
-            {
+            } catch (Exception ex) {
                 MessageBox.Show("Something went wrong with manual installation. This usually means that the files are already in use: try again with PSO2 closed.\n\nIf you've recieved this message even after closing PSO2, you may need to run OverParse as administrator.", "OverParse Setup", MessageBoxButton.OK, MessageBoxImage.Error);
                 Console.WriteLine($"PLUGIN INSTALL FAILED: {ex.ToString()}");
 
@@ -227,194 +194,139 @@ namespace OverParse
             }
         }
 
-        public void WriteClipboard()
-        {
-            string log = "";
-            foreach (Combatant c in combatants)
-            {
-                if (c.isAlly)
-                {
-                    string shortname = c.Name;
-                    if (c.Name.Length > 4)
-                    {
-                        shortname = c.Name.Substring(0, 4);
-                    }
-
-                    log += $"{shortname} {FormatNumber(c.Damage)} | ";
+        public void WriteClipboard() {
+            Func<int, string> FormatNumber = (int value) => {
+                if (value >= 100000000) {
+                    return (value / 1000000).ToString("#,0") + "M";
+                } else if (value >= 1000000) {
+                    return (value / 1000000D).ToString("0.#") + "M";
+                } else if (value >= 100000) {
+                    return (value / 1000).ToString("#,0") + "K";
+                } else if (value >= 1000) {
+                    return (value / 1000D).ToString("0.#") + "K";
+                } else {
+                    return value.ToString("#,0");
                 }
+            };
+            var log = new StringBuilder();
+            foreach (Combatant c in combatants.Where(c => c.IsAlly)) {
+                var shortname = c.Name.Substring(0, 4);
+                log.AppendLine($"{shortname} {FormatNumber(c.Damage)}");
             }
-
-            if (log == "") { return; }
-            log = log.Substring(0, log.Length - 2);
-
-            try
-            {
-                Clipboard.SetText(log);
+            if (log.Length == 0) {
+                return;
             }
-            catch
-            {
+            try {
+                Clipboard.SetText(log.ToString());
+            } catch {
                 //LMAO
             }
         }
 
-        public string WriteLog()
-        {
+        public string WriteLog() {
             Console.WriteLine("Logging encounter information to file");
 
-            foreach (Combatant c in combatants) // Debug for ID mapping
-            {
-                if (c.isAlly)
-                {
-                    foreach (Attack a in c.Attacks)
-                    {
-                        if (!MainWindow.skillDict.ContainsKey(a.ID))
-                        {
-                            TimeSpan t = TimeSpan.FromSeconds(a.Timestamp);
-                            Console.WriteLine($"{t.ToString(@"dd\.hh\:mm\:ss")} unmapped: {a.ID} ({a.Damage} dmg from {c.Name})");
-                        }
-                    }
+            // Debug for ID mapping
+            foreach (var c in combatants.Where(c => c.IsAlly)) {
+                foreach (Attack a in c.Attacks.Where(a => !a.hasName)) {
+                    TimeSpan t = TimeSpan.FromSeconds(a.Timestamp);
+                    Console.WriteLine($"{t.ToString(@"dd\.hh\:mm\:ss")} unmapped: {a.ID} ({a.Damage} dmg from {c.Name})");
                 }
             }
 
-            if (combatants.Count != 0)
-            {
-                int elapsed = newTimestamp - startTimestamp;
-                TimeSpan timespan = TimeSpan.FromSeconds(elapsed);
-                string timer = timespan.ToString(@"mm\:ss");
-                string log = DateTime.Now.ToString("F") + " | " + timer + Environment.NewLine;
+            // データがないよー
+            if (!combatants.Any()) {
+                return null;
+            }
 
-                log += Environment.NewLine;
+            //
+            var now = DateTime.Now;
+            var log = new StringBuilder();
+            var timespan = TimeSpan.FromSeconds(newTimestamp - startTimestamp);
+            log.AppendLine($"{now.ToString("F")} | {timespan.ToString(@"mm\:ss")}");
+            log.AppendLine();
 
-                foreach (Combatant c in combatants)
-                {
-                    if (c.isAlly || c.isZanverse)
-                        log += $"{c.Name} | {c.ReadDamage.ToString("N0")} dmg | {c.PercentReadDPSReadout} contrib | {c.DPS} DPS | Max: {c.MaxHit} | JA: {c.PercentJAReadout} | CRT: {c.PercentCriticalReadout}" + Environment.NewLine;
-                }
+            // 一覧(基本)
+            foreach (Combatant c in combatants.Where(c => c.IsAlly || c.IsZanverse || c.IsTurret)) {
+                log.AppendLine($"{c.Name} | {c.ReadDamage.ToString("N0")} dmg | {c.DisplayPercentDPS} contrib | {c.ReadDPS.ToString("NO")} DPS | Max: {c.DisplayMaxHit} | JA: {c.DisplayPercentJA}");
+            }
+            log.AppendLine();
+            log.AppendLine();
 
-                log += Environment.NewLine + Environment.NewLine;
+            // 一覧(詳細)
+            foreach (Combatant c in combatants.Where(c => c.IsAlly || c.IsZanverse || c.IsTurret)) {
+                log.AppendLine($"###### {c.Name} - {c.ReadDamage.ToString("N0")} dmg ({c.DisplayPercentDPS}) ######");
+                log.AppendLine();
 
-                foreach (Combatant c in combatants)
-                {
-                    if (c.isAlly || c.isZanverse)
-                    {
-                        string header = $"###### {c.Name} - {c.ReadDamage.ToString("N0")} dmg ({c.PercentReadDPSReadout}) ######";
-                        log += header + Environment.NewLine + Environment.NewLine;
+                var attackData = new List<Tuple<string, IEnumerable<Attack>>>();
 
-                        List<string> attackNames = new List<string>();
-                        List<Tuple<string, List<Attack>>> attackData = new List<Tuple<string, List<Attack>>>();
-
-                        if (c.isZanverse && Properties.Settings.Default.SeparateZanverse)
-                        {
-                            foreach (Combatant c2 in backupCombatants)
-                            {
-                                if (c2.ZanverseDamage > 0)
-                                    attackNames.Add(c2.ID);
-                            }
-
-                            foreach (string s in attackNames)
-                            {
-                                Combatant targetCombatant = backupCombatants.First(x => x.ID == s);
-                                List<Attack> matchingAttacks = targetCombatant.Attacks.Where(a => a.ID == Combatant.ZanverseID).ToList();
-                                attackData.Add(new Tuple<string, List<Attack>>(targetCombatant.Name, matchingAttacks));
-                            }
-
-                        }
-                        else
-                        {
-                            foreach (Attack a in c.Attacks)
-                            {
-                                if (a.ID == Combatant.ZanverseID && Properties.Settings.Default.SeparateZanverse)
-                                    continue;
-                                if (Combatant.TurretAttakIDs.Contains(a.ID) && Properties.Settings.Default.SeparateZanverse)
-                                    continue;
-                                if (MainWindow.skillDict.ContainsKey(a.ID))
-                                    a.ID = MainWindow.skillDict[a.ID]; // these are getting disposed anyway, no 1 cur
-                                if (!attackNames.Contains(a.ID))
-                                    attackNames.Add(a.ID);
-                            }
-
-                            foreach (string s in attackNames)
-                            {
-                                List<Attack> matchingAttacks = c.Attacks.Where(a => a.ID == s).ToList();
-                                attackData.Add(new Tuple<string, List<Attack>>(s, matchingAttacks));
-                            }
-                        }
-
-                        attackData = attackData.OrderByDescending(x => x.Item2.Sum(a => a.Damage)).ToList();
-
-                        foreach (var i in attackData)
-                        {
-                            double percent = i.Item2.Sum(a => a.Damage) * 100d / c.ReadDamage;
-                            string spacer = (percent >= 9) ? "" : " ";
-
-                            string paddedPercent = percent.ToString("00.00").Substring(0, 5);
-                            string hits = i.Item2.Count().ToString("N0");
-                            string sum = i.Item2.Sum(a => a.Damage).ToString("N0");
-                            string min = i.Item2.Min(a => a.Damage).ToString("N0");
-                            string max = i.Item2.Max(a => a.Damage).ToString("N0");
-                            string avg = i.Item2.Average(a => a.Damage).ToString("N0");
-                            string ja = string.Format("{0:0.0}", (i.Item2.Count(a => a.IsJA) * 100) / (float)i.Item2.Count()) + "%";
-                            string critical = string.Format("{0:0.0}", (i.Item2.Count(a => a.IsCritical) * 100) / (float)i.Item2.Count()) + "%";
-
-                            log += $"{paddedPercent}% | {i.Item1} ({sum} dmg)" + Environment.NewLine;
-                            log += $"       |   {hits} hits - {min} min, {avg} avg, {max} max, {ja} ja, {critical} critical" + Environment.NewLine;
-                        }
-
-                        log += Environment.NewLine;
+                if (c.IsZanverse && Properties.Settings.Default.SeparateZanverse) {
+                    var userIds = backupCombatants.Where(c2 => c2.ZanverseDamage > 0).Select(c2 => c2.ID);
+                    foreach (var userId in userIds) {
+                        var target = backupCombatants.First(x => x.ID == userId);
+                        var attacks = target.Attacks.Where(a => a.ID == Combatant.ZanverseID);
+                        attackData.Add(Tuple.Create(target.Name, attacks));
+                    }
+                } else {
+                    var attackNames = c.Attacks.WithoutZanverse().Select(a => a.NameOrId).Distinct();
+                    foreach (var attackName in attackNames) {
+                        var matchingAttacks = c.Attacks.Where(a => a.NameOrId == attackName);
+                        attackData.Add(Tuple.Create(attackName, matchingAttacks));
                     }
                 }
 
-                log += "Instance IDs: " + String.Join(", ", instances.ToArray());
+                foreach (var i in attackData.OrderByDescending(x => x.Item2.Sum(a => a.Damage))) {
+                    var attacks = i.Item2;
+                    var percent = attacks.Sum(a => a.Damage) * 100d / c.ReadDamage;
 
-                DateTime thisDate = DateTime.Now;
-                string directory = string.Format("{0:yyyy-MM-dd}", DateTime.Now);
-                Directory.CreateDirectory($"Logs/{directory}");
-                string datetime = string.Format("{0:yyyy-MM-dd_HH-mm-ss}", DateTime.Now);
-                string filename = $"Logs/{directory}/OverParse - {datetime}.txt";
-                File.WriteAllText(filename, log);
+                    var paddedPercent = percent.ToString("00.00").Substring(0, 5);
+                    var hits = attacks.Count().ToString("N0");
+                    var sum = attacks.Sum(a => a.Damage).ToString("N0");
+                    var min = attacks.Min(a => a.Damage).ToString("N0");
+                    var max = attacks.Max(a => a.Damage).ToString("N0");
+                    var avg = attacks.Average(a => a.Damage).ToString("N0");
+                    var ja = string.Format("{0:0.0}", attacks.Count(a => a.IsJA) * 100d / attacks.Count()) + "%";
 
-                return filename;
+                    log.AppendLine($"{paddedPercent}% | {i.Item1} ({sum} dmg)");
+                    log.AppendLine($"       |   {hits} hits - {min} min, {avg} avg, {max} max, {ja} ja");
+                }
+
+                log.AppendLine();
             }
 
-            return null;
+            // インスタンスID
+            log.AppendLine($"Instance IDs: {String.Join(", ", instances.ToArray())}");
+
+            // 出力
+            Directory.CreateDirectory($"Logs/{now.ToString("yyyy-MM-dd")}");
+            File.WriteAllText($"Logs/{now.ToString("yyyy-MM-dd")}/OverParse - {now.ToString("yyyy-MM-dd_HH-mm-ss")}.txt", log.ToString());
+            return filename;
         }
 
-        public string logStatus()
-        {
-            if (!valid)
-            {
+        public string logStatus() {
+            if (!valid) {
                 return "USER SHOULD PROBABLY NEVER SEE THIS";
             }
 
-            if (!notEmpty)
-            {
+            if (!notEmpty) {
                 return "No logs: Enable plugin and check pso2_bin!";
             }
 
-            if (!running)
-            {
+            if (!running) {
                 return $"Waiting for combat data...";
             }
 
             return encounterData;
         }
 
-        public void GenerateFakeEntries()
-        {
-            float totalDPS = 0;
-            for (int i = 0; i <= 12; i++)
-            {
+        public void GenerateFakeEntries() {
+            for (int i = 0; i <= 12; i++) {
                 Combatant temp = new Combatant("1000000" + i.ToString(), "TestPlayer_" + random.Next(0, 99).ToString());
                 combatants.Add(temp);
             }
 
-            foreach (Combatant c in combatants)
-                c.PercentDPS = c.DPS / totalDPS * 100;
-
-            for (int i = 0; i <= 9; i++)
-            {
+            for (int i = 0; i <= 9; i++) {
                 Combatant temp = new Combatant(i.ToString(), "TestEnemy_" + i.ToString());
-                temp.PercentDPS = -1;
                 combatants.Add(temp);
             }
 
@@ -424,110 +336,59 @@ namespace OverParse
             running = true;
         }
 
-        public void UpdateLog(object sender, EventArgs e)
-        {
-            if (!valid || !notEmpty)
-            {
+        public void UpdateLog(object sender, EventArgs e) {
+            if (!valid || !notEmpty) {
                 return;
             }
 
-            string newLines = logReader.ReadToEnd();
-            if (newLines != "")
-            {
-                string[] result = newLines.Split('\n');
-                foreach (string str in result)
-                {
-                    if (str != "")
-                    {
-                        string[] parts = str.Split(',');
-                        string lineTimestamp = parts[0];
-                        string instanceID = parts[1];
-                        string sourceID = parts[2];
-                        string targetID = parts[4];
-                        string targetName = parts[5];
-                        string sourceName = parts[3];
-                        int hitDamage = int.Parse(parts[7]);
-                        bool isJA = parts[8] == "1";
-                        bool isCritical = parts[9] == "1";
-                        string attackID = parts[6];
-                        string isMultiHit = parts[10];
-                        string isMisc = parts[11];
-                        string isMisc2 = parts[12];
-                        int index = -1;
+            var lines = logReader.ReadToEnd().Split('.');
+            var dumps = lines.Where(l => l.Length > 0).Select(l => new DamageDump(l));
 
-                        if (lineTimestamp == "0" && sourceName == "YOU")
-                        {
-                            Hacks.currentPlayerID = parts[2];
-                            Console.WriteLine("Found new active player ID: " + parts[2]);
-                            continue;
-                        }
-
-                        if (!instances.Contains(instanceID))
-                            instances.Add(instanceID);
-
-                        if (hitDamage < 1)
-                            continue;
-                        if (sourceID == "0" || attackID == "0")
-                            continue;
-
-                        foreach (Combatant x in combatants)
-                        {
-                            if (x.ID == sourceID && x.isTemporary == "no")
-                            {
-                                index = combatants.IndexOf(x);
-                            }
-                        }
-
-                        if (index == -1)
-                        {
-                            combatants.Add(new Combatant(sourceID, sourceName));
-                            index = combatants.Count - 1;
-                        }
-
-                        Combatant source = combatants[index];
-
-                        newTimestamp = int.Parse(lineTimestamp);
-                        if (startTimestamp == 0)
-                        {
-                            Console.WriteLine($"FIRST ATTACK RECORDED: {hitDamage} dmg from {sourceID} ({sourceName}) with {attackID}, to {targetID} ({targetName})");
-                            startTimestamp = newTimestamp;
-                        }
-
-                        source.Attacks.Add(new Attack(attackID, hitDamage, newTimestamp - startTimestamp, isJA, isCritical));
-                        running = true;
-                    }
+            foreach (var dump in dumps) {
+                // プレイヤーIDの取得
+                if (dump.IsCurrentPlayerIdData()) {
+                    Hacks.currentPlayerID = dump.SourceID;
+                    Console.WriteLine($"Found new active player ID: {dump.SourceID}");
+                    continue;
                 }
 
-                combatants.Sort((x, y) => y.ReadDamage.CompareTo(x.ReadDamage));
-
-                if (startTimestamp != 0)
-                {
-                    encounterData = "00:00 - ∞ DPS";
+                //
+                if (!instances.Contains(dump.InstanceID)) {
+                    instances.Add(dump.InstanceID);
                 }
 
-                if (startTimestamp != 0 && newTimestamp != startTimestamp)
-                {
-                    foreach (Combatant x in combatants)
-                    {
-                        if (x.isAlly || x.isZanverse)
-                            x.ActiveTime = (newTimestamp - startTimestamp);
-                    }
+                // 無効なダメージ(0以下等)を除外
+                if (dump.IsInvalidDamageData()) {
+                    continue;
                 }
 
+                //
+                var source = combatants.Where(x => x.ID == dump.SourceID && x.IsNotTemporary).FirstOrDefault();
+                if (source == null) {
+                    source = new Combatant(dump.SourceID, dump.SourceName);
+                    combatants.Add(source);
+                }
+
+                //
+                newTimestamp = int.Parse(dump.Timestamp);
+                if (startTimestamp == 0) {
+                    Console.WriteLine($"FIRST ATTACK RECORDED: {dump.Damage} dmg from {dump.SourceID} ({dump.SourceName}) with {dump.AttackID}, to {dump.TargetID} ({dump.TargetName})");
+                    startTimestamp = newTimestamp;
+                }
+
+                //
+                source.Attacks.Add(new Attack(dump.AttackID, dump.Damage, newTimestamp - startTimestamp, dump.IsJA, dump.IsCritical));
+                running = true;
             }
-        }
+            combatants.Sort((x, y) => y.ReadDamage.CompareTo(x.ReadDamage));
 
-        private String FormatNumber(int value)
-        {
-            if (value >= 100000000)
-                return (value / 1000000).ToString("#,0") + "M";
-            if (value >= 1000000)
-                return (value / 1000000D).ToString("0.#") + "M";
-            if (value >= 100000)
-                return (value / 1000).ToString("#,0") + "K";
-            if (value >= 1000)
-                return (value / 1000D).ToString("0.#") + "K";
-            return value.ToString("#,0");
+            if (newTimestamp == startTimestamp) {
+                encounterData = "00:00 - ∞ DPS";
+            } else {
+                foreach (Combatant c in combatants.Where(c => c.IsAlly || c.IsZanverse || c.IsTurret)) {
+                    c.ActiveTime = (newTimestamp - startTimestamp);
+                }
+            }
         }
     }
 }

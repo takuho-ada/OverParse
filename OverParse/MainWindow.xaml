@@ -89,7 +89,6 @@
                                 </MenuItem>
                             </MenuItem>
                             <MenuItem Style="{StaticResource topmenu}" Background="Transparent" Header="Parsing">
-                                <MenuItem Style="{StaticResource submenu}" IsCheckable="True" IsChecked="True" Header="Hide enemies/NPCs" x:Name="FilterPlayers" Click="FilterPlayers_Click"/>
                                 <MenuItem Style="{StaticResource submenu}" x:Name="SeparateZanverse" IsCheckable="True" IsChecked="False" Header="Show Zanverse damage separately" Click="SeparateZanverse_Click"/>
                                 <MenuItem Style="{StaticResource submenu}" x:Name="SeparateTurret" IsCheckable="True" IsChecked="False" Header="Show Turret damage separately" Click="SeparateTurret_Click"/>
                                 <MenuItem Style="{StaticResource submenu}" Header="AIS options">
@@ -186,28 +185,28 @@
                                 <GridViewColumn Header="Damage" x:Name="DamageColumn" Width="{Binding ElementName=DamageHelper, Path=ActualWidth}">
                                     <GridViewColumn.CellTemplate>
                                         <DataTemplate>
-                                            <TextBlock Margin="-4,0" Text="{Binding DamageReadout}" TextAlignment="Left"/>
+                                            <TextBlock Margin="-4,0" Text="{Binding DisplayDamage}" TextAlignment="Left"/>
                                         </DataTemplate>
                                     </GridViewColumn.CellTemplate>
                                 </GridViewColumn>
                                 <GridViewColumn Header="DPS" x:Name="DPSColumn" Width="{Binding ElementName=DPSHelper, Path=ActualWidth}">
                                     <GridViewColumn.CellTemplate>
                                         <DataTemplate>
-                                            <TextBlock Margin="-4,0" Text="{Binding DPSReadout}" TextAlignment="Right"/>
+                                            <TextBlock Margin="-4,0" Text="{Binding DisplayDPS}" TextAlignment="Right"/>
                                         </DataTemplate>
                                     </GridViewColumn.CellTemplate>
                                 </GridViewColumn>
                                 <GridViewColumn Header="JA" x:Name="JAColumn" Width="{Binding ElementName=JAHelper, Path=ActualWidth}">
                                     <GridViewColumn.CellTemplate>
                                         <DataTemplate>
-                                            <TextBlock Margin="-4,0" Text="{Binding PercentJAReadout}" TextAlignment="Right"/>
+                                            <TextBlock Margin="-4,0" Text="{Binding DisplayPercentJA}" TextAlignment="Right"/>
                                         </DataTemplate>
                                     </GridViewColumn.CellTemplate>
                                 </GridViewColumn>
                                 <GridViewColumn Header="Max Hit" x:Name="MaxHitColumn" Width="{Binding ElementName=MaxHitHelper, Path=ActualWidth}">
                                     <GridViewColumn.CellTemplate>
                                         <DataTemplate>
-                                            <TextBlock Margin="-4,0" Text="{Binding MaxHit}" TextAlignment="Right"/>
+                                            <TextBlock Margin="-4,0" Text="{Binding DisplayMaxHit}" TextAlignment="Right"/>
                                         </DataTemplate>
                                     </GridViewColumn.CellTemplate>
                                 </GridViewColumn>

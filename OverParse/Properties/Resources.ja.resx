@@ -117,96 +117,21 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="E0001" xml:space="preserve">
-    <value>OverParse doesn't have write access to its folder, and won't be able to save logs or update skill mappings. This usually happens when you run it from Program Files.
-
-This is a Windows restriction, and unfortunately I can't do anything about it.\n\nPlease run OverParse as administrator, or move it somewhere else. Sorry for the inconvenience!</value>
-  </data>
-  <data name="E0002" xml:space="preserve">
-    <value>Oops. This is embarassing.
-
-OverParse encountered an unexpected error. If this happens again, please complain to TyroneSama at your earliest convenience. Include your log from OverParse\\logs and the following message:
-
-{0}
-
-Sorry for the inconvenience!</value>
-    <comment>0: Exception.Message</comment>
-  </data>
-  <data name="E0003" xml:space="preserve">
-    <value>OverParse failed to initialize hotkeys. This is usually because something else is already using them.
-
-The program will still work, but hotkeys will not function. Sorry for the inconvenience!</value>
-  </data>
-  <data name="E0004" xml:space="preserve">
-    <value>OverParse failed to update its skill mappings. This usually means your connection hiccuped for a moment.
-
-A local copy will be used instead. If you'd like to try and update again, just relaunch OverParse.</value>
-  </data>
-  <data name="E0005" xml:space="preserve">
-    <value>OverParse failed to update its skill mappings. This usually means your connection hiccuped for a moment.
-
-Since you have no skill mappings downloaded, all attacks will be marked as "Unknown". If you'd like to try and update again, please relaunch OverParse.</value>
-  </data>
-  <data name="E0006" xml:space="preserve">
-    <value>You can install the parsing plugin from the PSO2 Tweaker's orb menu, under "Plugins".
-
-If you don't use the PSO2 tweaker, use "Help &gt; Reset OverParse..." to go through setup again.</value>
-  </data>
-  <data name="E0007" xml:space="preserve">
-    <value>What.</value>
-  </data>
-  <data name="E0008" xml:space="preserve">
-    <value>Couldn't parse your input. Enter only a number.</value>
-  </data>
-  <data name="I0001" xml:space="preserve">
-    <value>There's a new version of OverParse available!
-
-You're running version {0}. The latest version is version {1}.
-
-Would you like to download it now from GitHub?</value>
-    <comment>0: thisVersion, 1: responseVersion</comment>
-  </data>
-  <data name="I0002" xml:space="preserve">
-    <value>Are you SURE you want to reset OverParse?
-
-This will clear all of your application settings and allow you to reselect your pso2_bin folder, but won't delete your stored logs.</value>
-  </data>
-  <data name="I0003" xml:space="preserve">
-    <value>This will make the OverParse window invisible whenever PSO2 or OverParse are not in the foreground.
-
-To show the window, Alt+Tab into OverParse, or click the icon on your taskbar.</value>
-  </data>
-  <data name="I0004" xml:space="preserve">
-    <value>How many seconds should the system wait before stopping an encounter?</value>
-  </data>
-  <data name="I0005" xml:space="preserve">
-    <value>This doesn't actually do anything yet.</value>
-  </data>
-  <data name="I0006" xml:space="preserve">
-    <value>OverParse v{0}
-A lightweight self-auditing tool.
-
-Shoutouts to WaifuDfnseForce.
-Additional shoutouts to Variant, AIDA, and everyone else who makes the Tweaker plugin possible.
-
-Please use damage information responsibly.</value>
-    <comment>0: version</comment>
-  </data>
   <data name="I0007" xml:space="preserve">
-    <value>That doesn't appear to be a valid pso2_bin directory.
+    <value>指定されたディレクトリは有効な「pso2_bin」ディレクトリではありません。
 
-If you installed the game using default settings, it will probably be in C:\PHANTASYSTARONLINE2\pso2_bin\. Otherwise, find the location you installed to.</value>
+PSO2 をデフォルト設定でインストールした場合は、おそらく C:\PHANTASYSTARONLINE2\pso2_bin にインストールされています。その他の場合はインストールしたディレクトリを探してください。</value>
   </data>
   <data name="I0008" xml:space="preserve">
-    <value>Please select your pso2_bin directory. OverParse uses this to read your damage logs.
+    <value>「pso2_bin」ディレクトリを選択してください。OverParse はダメージログを選択したディレクトリから探します。
 
-If you picked a folder while setting up the Tweaker, choose that. Otherwise, it will be in your PSO2 installation folder.</value>
+Tweaker のセットアップでディレクトリを選択した場合は、そのディレクトリを指定してください。その他の場合は PSO2 をインストールしたディレクトリに存在します。</value>
   </data>
   <data name="W0001" xml:space="preserve">
-    <value>OverParse is a 3rd-party tool that breaks PSO2's Terms and Conditions. SEGA has confirmed in an official announcement that accounts found using parsing tools may be banned.
+    <value>OverParse は PSO2 の利用規約に違反するサードパーティツールです。SEGA はDPSツールの使用が確認された場合、アカウント停止の対象となることを公式に案内しています。
 
-If account safety is your first priority, do NOT use OverParse. You use this tool entirely at your own risk.
+アカウントの安全が最優先される場合には OverParseを使用しないでください。
 
-Would you like to continue with setup?</value>
+セットアップを続行しますか？</value>
   </data>
 </root>
