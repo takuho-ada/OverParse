@@ -580,7 +580,7 @@ namespace OverParse
             {
                 Combatant temp = new Combatant(c.ID, c.Name, c.isTemporary);
                 foreach (Attack a in c.Attacks) 
-                    temp.Attacks.Add(new Attack(a.ID, a.Damage, a.Timestamp));
+                    temp.Attacks.Add(new Attack(a.ID, a.Damage, a.Timestamp, a.IsJA, a.IsCritical));
                 temp.ActiveTime = c.ActiveTime;
                 workingList.Add(temp);
             }
@@ -820,7 +820,7 @@ namespace OverParse
             {
                 Combatant temp2 = new Combatant(c.ID, c.Name, c.isTemporary);
                 foreach (Attack a in c.Attacks)
-                    temp2.Attacks.Add(new Attack(a.ID, a.Damage, a.Timestamp));
+                    temp2.Attacks.Add(new Attack(a.ID, a.Damage, a.Timestamp, a.IsJA, a.IsCritical));
                 temp2.ActiveTime = c.ActiveTime;
                 temp2.PercentReadDPS = c.PercentReadDPS;
                 workingListCopy.Add(temp2);
@@ -1040,12 +1040,16 @@ namespace OverParse
         public string ID;
         public int Damage;
         public int Timestamp;
+        public bool IsJA;
+        public bool IsCritical;
 
-        public Attack(string initID, int initDamage, int initTimestamp)
+        public Attack(string initID, int initDamage, int initTimestamp, bool initJA, bool initCritical)
         {
             ID = initID;
             Damage = initDamage;
             Timestamp = initTimestamp;
+            IsJA = initJA;
+            IsCritical = initCritical;
         }
     }
 }

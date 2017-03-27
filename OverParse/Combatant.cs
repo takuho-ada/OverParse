@@ -297,6 +297,24 @@ namespace OverParse
             }
         }
 
+        public string PercentJAReadout
+        {
+            get
+            {
+                var ja = (Attacks.Count(a => a.IsJA) * 100) / (float)Attacks.Count();
+                return string.Format("{0:0.0}", ja) + "%";
+            }
+        }
+
+        public string PercentCriticalReadout
+        {
+            get
+            {
+                var critical = (Attacks.Count(a => a.IsCritical) * 100) / (float)Attacks.Count();
+                return string.Format("{0:0.0}", critical) + "%";
+            }
+        }
+
         private String FormatNumber(float value)
         {
             int num = (int)Math.Round(value);

@@ -288,7 +288,7 @@ namespace OverParse
                 foreach (Combatant c in combatants)
                 {
                     if (c.isAlly || c.isZanverse)
-                        log += $"{c.Name} | {c.ReadDamage.ToString("N0")} dmg | {c.PercentReadDPSReadout} contrib | {c.DPS} DPS | Max: {c.MaxHit}" + Environment.NewLine;
+                        log += $"{c.Name} | {c.ReadDamage.ToString("N0")} dmg | {c.PercentReadDPSReadout} contrib | {c.DPS} DPS | Max: {c.MaxHit} | JA: {c.PercentJAReadout} | CRT: {c.PercentCriticalReadout}" + Environment.NewLine;
                 }
 
                 log += Environment.NewLine + Environment.NewLine;
@@ -301,7 +301,7 @@ namespace OverParse
                         log += header + Environment.NewLine + Environment.NewLine;
 
                         List<string> attackNames = new List<string>();
-                        List<Tuple<string, List<int>>> attackData = new List<Tuple<string, List<int>>>();
+                        List<Tuple<string, List<Attack>>> attackData = new List<Tuple<string, List<Attack>>>();
 
                         if (c.isZanverse && Properties.Settings.Default.SeparateZanverse)
                         {
@@ -314,8 +314,8 @@ namespace OverParse
                             foreach (string s in attackNames)
                             {
                                 Combatant targetCombatant = backupCombatants.First(x => x.ID == s);
-                                List<int> matchingAttacks = targetCombatant.Attacks.Where(a => a.ID == "2106601422").Select(a => a.Damage).ToList();
-                                attackData.Add(new Tuple<string, List<int>>(targetCombatant.Name, matchingAttacks));
+                                List<Attack> matchingAttacks = targetCombatant.Attacks.Where(a => a.ID == Combatant.ZanverseID).ToList();
+                                attackData.Add(new Tuple<string, List<Attack>>(targetCombatant.Name, matchingAttacks));
                             }
 
                         }
@@ -323,7 +323,9 @@ namespace OverParse
                         {
                             foreach (Attack a in c.Attacks)
                             {
-                                if (a.ID == "2106601422" && Properties.Settings.Default.SeparateZanverse)
+                                if (a.ID == Combatant.ZanverseID && Properties.Settings.Default.SeparateZanverse)
+                                    continue;
+                                if (Combatant.TurretAttakIDs.Contains(a.ID) && Properties.Settings.Default.SeparateZanverse)
                                     continue;
                                 if (MainWindow.skillDict.ContainsKey(a.ID))
                                     a.ID = MainWindow.skillDict[a.ID]; // these are getting disposed anyway, no 1 cur
@@ -333,27 +335,29 @@ namespace OverParse
 
                             foreach (string s in attackNames)
                             {
-                                List<int> matchingAttacks = c.Attacks.Where(a => a.ID == s).Select(a => a.Damage).ToList();
-                                attackData.Add(new Tuple<string, List<int>>(s, matchingAttacks));
+                                List<Attack> matchingAttacks = c.Attacks.Where(a => a.ID == s).ToList();
+                                attackData.Add(new Tuple<string, List<Attack>>(s, matchingAttacks));
                             }
                         }
 
-                        attackData = attackData.OrderByDescending(x => x.Item2.Sum()).ToList();
+                        attackData = attackData.OrderByDescending(x => x.Item2.Sum(a => a.Damage)).ToList();
 
                         foreach (var i in attackData)
                         {
-                            double percent = i.Item2.Sum() * 100d / c.ReadDamage;
+                            double percent = i.Item2.Sum(a => a.Damage) * 100d / c.ReadDamage;
                             string spacer = (percent >= 9) ? "" : " ";
 
                             string paddedPercent = percent.ToString("00.00").Substring(0, 5);
                             string hits = i.Item2.Count().ToString("N0");
-                            string sum = i.Item2.Sum().ToString("N0");
-                            string min = i.Item2.Min().ToString("N0");
-                            string max = i.Item2.Max().ToString("N0");
-                            string avg = i.Item2.Average().ToString("N0");
+                            string sum = i.Item2.Sum(a => a.Damage).ToString("N0");
+                            string min = i.Item2.Min(a => a.Damage).ToString("N0");
+                            string max = i.Item2.Max(a => a.Damage).ToString("N0");
+                            string avg = i.Item2.Average(a => a.Damage).ToString("N0");
+                            string ja = string.Format("{0:0.0}", (i.Item2.Count(a => a.IsJA) * 100) / (float)i.Item2.Count()) + "%";
+                            string critical = string.Format("{0:0.0}", (i.Item2.Count(a => a.IsCritical) * 100) / (float)i.Item2.Count()) + "%";
 
                             log += $"{paddedPercent}% | {i.Item1} ({sum} dmg)" + Environment.NewLine;
-                            log += $"       |   {hits} hits - {min} min, {avg} avg, {max} max" + Environment.NewLine;
+                            log += $"       |   {hits} hits - {min} min, {avg} avg, {max} max, {ja} ja, {critical} critical" + Environment.NewLine;
                         }
 
                         log += Environment.NewLine;
@@ -489,7 +493,7 @@ namespace OverParse
                             startTimestamp = newTimestamp;
                         }
 
-                        source.Attacks.Add(new Attack(attackID, hitDamage, newTimestamp - startTimestamp));
+                        source.Attacks.Add(new Attack(attackID, hitDamage, newTimestamp - startTimestamp, isJA, isCritical));
                         running = true;
                     }
                 }

@@ -197,6 +197,13 @@
                                         </DataTemplate>
                                     </GridViewColumn.CellTemplate>
                                 </GridViewColumn>
+                                <GridViewColumn Header="JA" x:Name="JAColumn" Width="{Binding ElementName=JAHelper, Path=ActualWidth}">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Margin="-4,0" Text="{Binding PercentJAReadout}" TextAlignment="Right"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
                                 <GridViewColumn Header="Max Hit" x:Name="MaxHitColumn" Width="{Binding ElementName=MaxHitHelper, Path=ActualWidth}">
                                     <GridViewColumn.CellTemplate>
                                         <DataTemplate>
@@ -214,13 +221,15 @@
                             <ColumnDefinition x:Name="NameHelperColumn" Width="1.5*"/>
                             <ColumnDefinition x:Name="DamageHelperColumn" Width="1.5*"/>
                             <ColumnDefinition x:Name="DPSHelperColumn" Width="1*"/>
+                            <ColumnDefinition x:Name="JAHelperColumn" Width="1*"/>
                             <ColumnDefinition x:Name="MaxHitHelperColumn" Width="3*"/>
                         </Grid.ColumnDefinitions>
                         <!--This is the hidden helper Field which is used to bind to, using the "Fill" column of the helper grid-->
                         <Grid Grid.Column="0" x:Name="NameHelper"/>
                         <Grid Grid.Column="1" x:Name="DamageHelper"/>
                         <Grid Grid.Column="2" x:Name="DPSHelper"/>
-                        <Grid Grid.Column="3" x:Name="MaxHitHelper"/>
+                        <Grid Grid.Column="3" x:Name="JAHelper"/>
+                        <Grid Grid.Column="4" x:Name="MaxHitHelper"/>
                     </Grid>
                     <Rectangle Panel.ZIndex="999" x:Name="EncounterIndicator" Fill="#FFF4F4F5" Grid.Row="2" Height="2" Stroke="Transparent" VerticalAlignment="Top"/>
 
