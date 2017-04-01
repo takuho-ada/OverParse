@@ -114,8 +114,7 @@ namespace OverParse
                 MessageBox.Show(Properties.Resources.E0003, "OverParse Setup", MessageBoxButton.OK, MessageBoxImage.Information);
             }
 
-
-            if (!SkillDictionary.GetInstance().Initialize("https://raw.githubusercontent.com/VariantXYZ/PSO2ACT/master/PSO2ACT/skills.csv")) {
+            if (!SkillDictionary.GetInstance().Initialize(SkillDictionary.LanguageEnum.JA)) {
                 if (File.Exists(SkillDictionary.SkillCSVName)) {
                     MessageBox.Show(Properties.Resources.E0004, "OverParse Setup", MessageBoxButton.OK, MessageBoxImage.Information);
                 } else {

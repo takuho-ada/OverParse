@@ -8,6 +8,12 @@ namespace OverParse.Models
 {
     public sealed class SkillDictionary
     {
+        public enum LanguageEnum
+        {
+            EN,
+            JA,
+        }
+
         public static readonly string SkillCSVName = "skills.csv";
 
         private static readonly SkillDictionary instance = new SkillDictionary();
@@ -21,13 +27,13 @@ namespace OverParse.Models
 
         private SkillDictionary() { }
 
-        public bool Initialize(string url) {
+        public bool Initialize(LanguageEnum lang) {
             Console.WriteLine($"Updating {SkillCSVName}");
             string[] lines;
             var errorOccurred = false;
             try {
                 var client = new WebClient();
-                var stream = client.OpenRead(url);
+                var stream = client.OpenRead(SkillCSVUrl(lang));
                 var webreader = new StreamReader(stream);
                 String content = webreader.ReadToEnd();
                 File.WriteAllText(SkillCSVName, content);
@@ -72,6 +78,15 @@ namespace OverParse.Models
         private void CheckInitialized() {
             if (!initialized) {
                 throw new InvalidOperationException("SkillDictionary is not initialized.");
+            }
+        }
+
+        private static string SkillCSVUrl(LanguageEnum lang) {
+            switch (lang) {
+                case LanguageEnum.JA:
+                    return "https://raw.githubusercontent.com/nemomomo/PSO2ACT/master/PSO2ACT/skills.csv";
+                default:
+                    return "https://raw.githubusercontent.com/nemomomo/PSO2ACT/master/PSO2ACT/skills.csv";
             }
         }
     }
