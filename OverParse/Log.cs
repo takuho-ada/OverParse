@@ -248,7 +248,7 @@ namespace OverParse
 
             // 一覧(基本)
             foreach (Combatant c in combatants.Where(c => c.IsAlly || c.IsZanverse || c.IsTurret)) {
-                log.AppendLine($"{c.Name} | {c.ReadDamage.ToString("N0")} dmg | {c.DisplayPercentDPS} contrib | {c.ReadDPS.ToString("NO")} DPS | Max: {c.DisplayMaxHit} | JA: {c.DisplayPercentJA}");
+                log.AppendLine($"{c.Name} | {c.DisplayDamage} dmg | {c.DisplayPercentDPS} contrib | {c.ReadDPS:#,0.0} DPS | Max: {c.DisplayMaxHit} | JA: {c.DisplayPercentJA}");
             }
             log.AppendLine();
             log.AppendLine();
@@ -341,7 +341,7 @@ namespace OverParse
                 return;
             }
 
-            var lines = logReader.ReadToEnd().Split('.');
+            var lines = logReader.ReadToEnd().Split('\n');
             var dumps = lines.Where(l => l.Length > 0).Select(l => new DamageDump(l));
 
             foreach (var dump in dumps) {
