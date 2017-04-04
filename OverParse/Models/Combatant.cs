@@ -92,7 +92,7 @@ namespace OverParse.Models
 
         public Brush Brush {
             get {
-                if (Properties.Settings.Default.ShowDamageGraph && (IsAlly)) {
+                if (Properties.Settings.Default.ShowDamageGraph && IsAlly) {
                     return generateBarBrush(Color.FromArgb(200, 65, 112, 166), new Color());
                 } else {
                     if (IsYou && Properties.Settings.Default.HighlightYourDamage)
@@ -105,7 +105,7 @@ namespace OverParse.Models
 
         public Brush Brush2 {
             get {
-                if (Properties.Settings.Default.ShowDamageGraph && (IsAlly && !IsZanverse)) {
+                if (Properties.Settings.Default.ShowDamageGraph && IsAlly) {
                     return generateBarBrush(Color.FromArgb(140, 65, 112, 166), Color.FromArgb(64, 16, 16, 16));
                 } else {
                     if (IsYou && Properties.Settings.Default.HighlightYourDamage)

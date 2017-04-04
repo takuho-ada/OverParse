@@ -86,7 +86,7 @@ namespace OverParse.Models
                 case LanguageEnum.JA:
                     return "https://raw.githubusercontent.com/nemomomo/PSO2ACT/master/PSO2ACT/skills.csv";
                 default:
-                    return "https://raw.githubusercontent.com/nemomomo/PSO2ACT/master/PSO2ACT/skills.csv";
+                    return "https://raw.githubusercontent.com/VariantXYZ/PSO2ACT/master/PSO2ACT/skills.csv";
             }
         }
     }

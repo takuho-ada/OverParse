@@ -511,10 +511,11 @@ namespace OverParse
                 workingList.Add(holder);
             }
 
-            // get group damage totals
-            int totalReadDamage = workingList.Where(c => (c.IsAlly || c.IsZanverse || c.IsTurret)).Sum(c => c.ReadDamage);
+            // 合計ダメージ等
+            var totalReadDamage = workingList.Where(c => (c.IsAlly || c.IsZanverse || c.IsTurret)).Sum(c => c.ReadDamage);
+            var totalDPS = totalReadDamage / (float)elapsed;
 
-            // dps calcs!
+            // DPS(割合)の計算
             foreach (Combatant c in workingList) {
                 if (c.IsAlly || c.IsZanverse || c.IsTurret) {
                     c.PercentReadDPS = c.ReadDamage * 100f / totalReadDamage;
@@ -526,10 +527,10 @@ namespace OverParse
             // damage graph stuff
             Combatant.maxShare = 0;
             foreach (Combatant c in workingList) {
-                if ((c.IsAlly) && c.ReadDamage > Combatant.maxShare)
+                if (c.IsAlly && c.ReadDamage > Combatant.maxShare) {
                     Combatant.maxShare = c.ReadDamage;
-
-                bool filtered = true;
+                }
+                var filtered = true;
                 if (Properties.Settings.Default.SeparateAIS) {
                     if (c.IsAlly && c.IsNotTemporary && !HidePlayers.IsChecked) {
                         filtered = false;
@@ -539,7 +540,6 @@ namespace OverParse
                         filtered = false;
                     }
                 } else {
-                    // 
                     if (c.IsAlly || c.IsZanverse || c.IsTurret) {
                         filtered = false;
                     }
@@ -549,50 +549,39 @@ namespace OverParse
                 }
             }
 
-            // status pane updates
-            EncounterIndicator.Fill = new SolidColorBrush(Color.FromArgb(255, 255, 100, 100));
-            EncounterStatus.Content = encounterlog.logStatus();
-
-            if (encounterlog.valid && encounterlog.notEmpty) {
-                EncounterIndicator.Fill = new SolidColorBrush(Color.FromArgb(255, 255, 255, 0));
-                EncounterStatus.Content = $"Waiting - {lastStatus}";
-                if (lastStatus == "")
-                    EncounterStatus.Content = "Waiting for combat data...";
-
-                CombatantData.Items.Refresh();
-            }
-
+            // ステータス表示の更新
             if (encounterlog.running) {
                 EncounterIndicator.Fill = new SolidColorBrush(Color.FromArgb(255, 100, 255, 100));
-
-                TimeSpan timespan = TimeSpan.FromSeconds(elapsed);
-                string timer = timespan.ToString(@"mm\:ss");
-                EncounterStatus.Content = $"{timer}";
-
-                float totalDPS = totalReadDamage / (float)elapsed;
-
-                if (totalDPS > 0)
-                    EncounterStatus.Content += $" - {totalDPS.ToString("N2")} DPS";
-
-                if (Properties.Settings.Default.CompactMode)
-                    foreach (Combatant c in workingList)
-                        if (c.IsYou)
-                            EncounterStatus.Content += $" - MAX: {c.MaxHitDamage.ToString("N0")}";
-
-                lastStatus = EncounterStatus.Content.ToString();
-            }
-
-            // autoend
-            if (encounterlog.running) {
-                if (Properties.Settings.Default.AutoEndEncounters) {
-                    int unixTimestamp = (int)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
-                    if ((unixTimestamp - encounterlog.newTimestamp) >= Properties.Settings.Default.EncounterTimeout) {
-                        Console.WriteLine("Automatically ending an encounter");
-                        EndEncounter_Click(null, null);
+                EncounterStatus.Content = $"{TimeSpan.FromSeconds(elapsed):mm\\:ss} - {totalReadDamage:#,0} dmg - {totalDPS:N2} DPS";
+                if (Properties.Settings.Default.CompactMode) {
+                    var target = workingList.FirstOrDefault(c => c.IsYou);
+                    if (target != null) {
+                        EncounterStatus.Content += $" - MAX: {target.MaxHitDamage:N0}";
                     }
                 }
+                CombatantData.Items.Refresh();
+                lastStatus = EncounterStatus.Content.ToString();
+            } else if (encounterlog.valid && encounterlog.notEmpty) {
+                EncounterIndicator.Fill = new SolidColorBrush(Color.FromArgb(255, 255, 255, 0));
+                if (lastStatus.Length == 0) {
+                    EncounterStatus.Content = "Waiting for combat data...";
+                } else {
+                    EncounterStatus.Content = $"Waiting - {lastStatus}";
+                }
+                CombatantData.Items.Refresh();
+            } else {
+                EncounterIndicator.Fill = new SolidColorBrush(Color.FromArgb(255, 255, 100, 100));
+                EncounterStatus.Content = encounterlog.logStatus();
             }
 
+            // 自動終了(ログ出力とか)
+            if (encounterlog.running && Properties.Settings.Default.AutoEndEncounters) {
+                int unixTimestamp = (int)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
+                if ((unixTimestamp - encounterlog.newTimestamp) >= Properties.Settings.Default.EncounterTimeout) {
+                    Console.WriteLine("Automatically ending an encounter");
+                    EndEncounter_Click(null, null);
+                }
+            }
         }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e) {
@@ -643,7 +632,7 @@ namespace OverParse
             Properties.Settings.Default.AutoEndEncounters = temp;
             encounterlog.backupCombatants = encounterlog.combatants;
 
-            var workingListCopy = workingList.Select(c=> new Combatant(c)).ToList();
+            var workingListCopy = workingList.Select(c => new Combatant(c)).ToList();
             Console.WriteLine("Saving last combatant list");
             lastCombatants = encounterlog.combatants;
             encounterlog.combatants = workingListCopy;

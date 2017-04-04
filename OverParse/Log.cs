@@ -242,8 +242,10 @@ namespace OverParse
             //
             var now = DateTime.Now;
             var log = new StringBuilder();
+            var totalReadDamage = combatants.Where(c => (c.IsAlly || c.IsZanverse || c.IsTurret)).Sum(c => c.ReadDamage);
+            var totalDPS = totalReadDamage / (float)(newTimestamp - startTimestamp);
             var timespan = TimeSpan.FromSeconds(newTimestamp - startTimestamp);
-            log.AppendLine($"{now.ToString("F")} | {timespan.ToString(@"mm\:ss")}");
+            log.AppendLine($"{now.ToString("F")} | {timespan.ToString(@"mm\:ss")} | {totalReadDamage:#,0} dmg | {totalDPS:N2} DPS");
             log.AppendLine();
 
             // 一覧(基本)

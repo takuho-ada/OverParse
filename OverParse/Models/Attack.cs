@@ -6,11 +6,11 @@ namespace OverParse.Models
 {
     public class Attack
     {
-        public string ID;
-        public int Damage;
-        public int Timestamp;
-        public bool IsJA;
-        public bool IsCritical;
+        public string ID { get; private set; }
+        public int Damage { get; private set; }
+        public int Timestamp { get; private set; }
+        public bool IsJA { get; private set; }
+        public bool IsCritical { get; private set; }
 
         public Attack(string id, int damage, int timestamp, bool isJa, bool isCritical) {
             this.ID = id;
