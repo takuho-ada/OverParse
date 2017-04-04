@@ -488,7 +488,7 @@ namespace OverParse
             }
 
             // 銃座のダメージを分離
-            if (Properties.Settings.Default.SeparateZanverse && workingList.Any(c => c.IsAlly && c.TurretDamage > 0)) {
+            if (Properties.Settings.Default.SeparateTurret && workingList.Any(c => c.IsAlly && c.TurretDamage > 0)) {
                 var holder = new Combatant("99999998", "Turret", Combatant.TemporaryEnum.IS_TURRET);
                 foreach (var c in workingList.Where(c => c.IsAlly)) {
                     var targetAttacks = c.Attacks.Where(a => Combatant.TurretAttakIDs.Contains(a.ID)).ToList();
