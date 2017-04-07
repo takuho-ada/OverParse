@@ -7,166 +7,229 @@ namespace OverParse.Models
 {
     public class Combatant
     {
-        public enum TemporaryEnum
+        public enum TypeEnum
         {
             IS_AIS,
             IS_ZANVERSE,
             IS_TURRET,
-            NOT_TEMPORARY,
+            IS_DEFAULT,
         }
 
-        private const float maxBGopacity = 0.6f;
-
-        public string ID { get; set; }
-        public string Name { get; set; }
-        public float PercentReadDPS { get; set; }
-        public int ActiveTime { get; set; }
-        public TemporaryEnum IsTemporary { get; set; }
+        public string ID { get; private set; }
+        public string Name { get; private set; }
+        public TypeEnum Type { get; private set; }
         public List<Attack> Attacks { get; set; }
 
-        Color green;
+        public static int ActiveTime { get; private set; } = 0;
+        public static int TotalDamage { get; private set; } = 0;
+        public static float MaxShare { get; private set; } = 0;
+        private static Dictionary<string, string> users = new Dictionary<string, string>();
 
-        public static string[] AISAttackIDs = new string[] {
-            "119505187" , // A.I.S rifle (Solid Vulcan)
-            "79965782"  , // A.I.S melee first attack (Photon Saber)
-            "79965783"  , // A.I.S melee second attack (Photon Saber)
-            "79965784"  , // A.I.S melee third attack (Photon Saber)
-            "80047171"  , // A.I.S dash melee (Photon Saber)
-            "434705298" , // A.I.S rockets (Photon Grenade)
-            "79964675"  , // A.I.S gap closer PA attack (Photon Rush)
-            "1460054769", // A.I.S cannon (Photon Blaster)
-            "4081218683", // A.I.S mob freezing attack (Photon Blizzard)
-            "3298256598", // A.I.S Weak Bullet
-            "2826401717", // A.I.S Area Heal
-        };
-        public static string[] TurretAttakIDs = new string[] {
-            "1852253343", // Normal Turret
-            "1358461404", // Rodos Grapple Turret
-            "2414748436", // Facility Cannon
-            "1954812953", // Photon Cannon uncharged
-            "2822784832", // Photon Cannon charged
-            "791327364" , // Binding Arrow Turret
-            "3339644659", // Photon Particle Turret
-        };
-        public static readonly string ZanverseID = "2106601422";
+        public static void Update(IEnumerable<Combatant> combatants) {
+            var work = combatants.Where(c => c.IsAlly).ToList();
+            if (work.Any()) {
+                ActiveTime = work.Max(c => c.Attacks.Max(a => a.Elapse));
+                TotalDamage = work.Sum(c => c.Damage);
+                MaxShare = work.Where(c => c.IsPlayer).Max(c => c.Damage);
+            } else {
+                ActiveTime = 0;
+                TotalDamage = 0;
+                MaxShare = 0;
+            }
+        }
+
+        public Combatant(string id, string name, TypeEnum temp) {
+            ID = id;
+            Name = name;
+            Attacks = new List<Attack>();
+            Type = temp;
+        }
+
+        public Combatant(string id, string name) : this(id, name, TypeEnum.IS_DEFAULT) { }
+
+        public Combatant(Combatant other) : this(other.ID, other.Name, other.Type) {
+            Attacks = other.Attacks.ToList();
+        }
+
+        public IEnumerable<Tuple<string, IEnumerable<Attack>>> AttackDetails() {
+            if (Properties.Settings.Default.SeparateZanverse && IsZanverse) {
+                var users = Attacks.Select(a => new { id = a.UserID, name = a.UserName }).Distinct();
+                foreach (var user in users) {
+                    var attacks = Attacks.Where(a => a.UserID == user.id);
+                    yield return Tuple.Create(user.name, attacks);
+                }
+            } else {
+                var names = Attacks.Select(a => a.NameOrId).Distinct();
+                foreach (var name in names) {
+                    var attacks = Attacks.Where(a => a.NameOrId == name);
+                    yield return Tuple.Create(name, attacks);
+                }
+            }
+        }
+
+        // (全体)
+        public static float TotalDPS => TotalDamage / (float)ActiveTime;
+        public static string DisplayActiveTime => $"{TimeSpan.FromSeconds(ActiveTime):mm\\:ss}";
+        public static string DisplayTotalDamage => $"{TotalDamage:#,0}";
+        public static string DisplayTotalDPS => $"{TotalDPS:#,0.00}";
 
         // ダメージ種別
-        public bool IsAlly => (int.Parse(ID) >= 10000000 && !IsZanverse && !IsTurret);
-        public bool IsAIS => (IsTemporary == TemporaryEnum.IS_AIS);
-        public bool IsZanverse => (IsTemporary == TemporaryEnum.IS_ZANVERSE);
-        public bool IsTurret => (IsTemporary == TemporaryEnum.IS_TURRET);
-        public bool IsNotTemporary => (IsTemporary == TemporaryEnum.NOT_TEMPORARY);
+        public bool IsAlly => int.Parse(ID) >= 10000000;
+        public bool IsPlayer => (IsAlly && !IsZanverse && !IsTurret);
+        public bool IsAIS => (Type == TypeEnum.IS_AIS);
+        public bool IsZanverse => (Type == TypeEnum.IS_ZANVERSE);
+        public bool IsTurret => (Type == TypeEnum.IS_TURRET);
+        public bool IsDefault => (Type == TypeEnum.IS_DEFAULT);
         public bool IsSeparated => (IsAIS || IsZanverse || IsTurret);
         public bool IsYou => (ID == Hacks.currentPlayerID);
 
         // 各種ダメージ
         public int Damage => this.Attacks.Sum(a => a.Damage);
-        public int ZanverseDamage => this.Attacks.Where(a => a.ID == ZanverseID).Sum(a => a.Damage);
-        public int AISDamage => this.Attacks.Where(a => AISAttackIDs.Contains(a.ID)).Sum(a => a.Damage);
-        public int TurretDamage => this.Attacks.Where(a => TurretAttakIDs.Contains(a.ID)).Sum(a => a.Damage);
-        public int ReadDamage => IsSeparated ? Damage : Attacks.WithoutSeparated().Sum(a => a.Damage);
+        public int ZanverseDamage => this.Attacks.Where(a => a.IsZanverse).Sum(a => a.Damage);
+        public int AISDamage => this.Attacks.Where(a => a.IsAIS).Sum(a => a.Damage);
+        public int TurretDamage => this.Attacks.Where(a => a.IsTurret).Sum(a => a.Damage);
 
         // DPS
         public float DPS => Damage / (float)ActiveTime;
-        public float ReadDPS => ReadDamage / (float)ActiveTime;
+        public float Contribute => IsAlly ? (Damage / (float)TotalDamage) : -1;
 
         // 最大ダメージ
         public Attack MaxHitAttack => Attacks.OrderByDescending(a => a.Damage).FirstOrDefault();
         public string MaxHitID => MaxHitAttack.ID;
         public int MaxHitDamage => MaxHitAttack.Damage;
 
-        // 割合系
-        public float PercentJA => Attacks.Count(a => a.IsJA) * 100f / Attacks.Count();
-        public float PercentCritical => Attacks.Count(a => a.IsCritical) * 100f / Attacks.Count();
+        public class BaseBinder
+        {
+            protected Combatant c;
 
-        // フォーム表示(ユーザ名)
-        public string DisplayName => (Properties.Settings.Default.AnonymizeNames && IsAlly) ? AnonymousName : Name;
-        public string AnonymousName => IsYou ? Name : "--";
+            public BaseBinder(Combatant c) {
+                this.c = c;
+            }
 
-        // フォーム表示(その他)
-        public string DisplayDamage => ReadDamage.ToString("N0");
-        public string DisplayDPS => (Properties.Settings.Default.ShowRawDPS) ? FormatNumber(ReadDPS) : DisplayPercentDPS;
-        public string DisplayPercentDPS => (PercentReadDPS < -0.5f) ? "--" : $"{PercentReadDPS:0.0}%";
-        public string DisplayPercentJA => $"{PercentJA:0.0}%";
-        public string DisplayMaxHit => (MaxHitAttack == null) ? "--" : $"{MaxHitAttack.Damage.ToString("N0")} ({MaxHitAttack.Name})";
+            public virtual string Name => c.Name;
+            public virtual string Damage => $"{c.Damage:#,0}";
+            public virtual string Contribute => (c.Contribute < 0) ? "--" : $"{c.Contribute:0.0%}";
+            public virtual string DPS => $"{c.DPS:#,0.00}";
+            public virtual string MaxHit => (c.MaxHitAttack == null) ? "--" : $"{c.MaxHitAttack.Damage:#,0} ({c.MaxHitAttack.Name})";
+            public virtual string JA => $"{c.Attacks.PercentJA():0.0%}";
+        }
 
-        public Brush Brush {
-            get {
-                if (Properties.Settings.Default.ShowDamageGraph && IsAlly) {
-                    return generateBarBrush(Color.FromArgb(200, 65, 112, 166), new Color());
+        public class LogBinder : BaseBinder
+        {
+            public LogBinder(Combatant c) : base(c) { }
+
+            public string NormalLine => $"{Name} | {Damage} dmg | {Contribute} contrib | {DPS} DPS | Max: {MaxHit} | JA: {JA}";
+            public string DetailHeaderLine => $"###### {Name} - {Damage} dmg ({Contribute}) ######";
+        }
+
+        public class FormBinder : BaseBinder
+        {
+            private static Color green = Color.FromArgb(160, 32, 130, 32);
+            private static Color color1fg = Color.FromArgb(200, 65, 112, 166);
+            private static Color color1bg = new Color();
+            private static Color color2fg = Color.FromArgb(140, 65, 112, 166);
+            private static Color color2bg = Color.FromArgb(64, 16, 16, 16);
+
+            public FormBinder(Combatant c) : base(c) { }
+
+            public Brush Brush1 => generateBarBrush(color1fg, color1bg);
+            public Brush Brush2 => generateBarBrush(color2fg, color2bg);
+            public override string Name => (Properties.Settings.Default.AnonymizeNames && c.IsPlayer && !c.IsYou) ? "--" : base.Name;
+            public override string DPS => FormatUnit(c.DPS);
+            public string ContributeOrDPS => (Properties.Settings.Default.ShowRawDPS) ? DPS : Contribute;
+
+            private Brush generateBarBrush(Color fgColor, Color bgColor) {
+                bool showDamageGraph = (Properties.Settings.Default.ShowDamageGraph && c.IsPlayer);
+                bool highlightYou = (Properties.Settings.Default.HighlightYourDamage && c.IsYou);
+                if (showDamageGraph) {
+                    // グラフ表示
+                    if (highlightYou) {
+                        fgColor = green;
+                    }
+                    LinearGradientBrush lgb = new LinearGradientBrush();
+                    lgb.StartPoint = new System.Windows.Point(0, 0);
+                    lgb.EndPoint = new System.Windows.Point(1, 0);
+                    lgb.GradientStops.Add(new GradientStop(fgColor, 0));
+                    lgb.GradientStops.Add(new GradientStop(fgColor, c.Damage / Combatant.MaxShare));
+                    lgb.GradientStops.Add(new GradientStop(bgColor, c.Damage / Combatant.MaxShare));
+                    lgb.GradientStops.Add(new GradientStop(bgColor, 1));
+                    lgb.SpreadMethod = GradientSpreadMethod.Repeat;
+                    return lgb;
+                } else if (highlightYou) {
+                    // 自分(別色)
+                    return new SolidColorBrush(green);
                 } else {
-                    if (IsYou && Properties.Settings.Default.HighlightYourDamage)
-                        return new SolidColorBrush(green);
-                    return new SolidColorBrush(new Color());
+                    // その他(背景色のみ)
+                    return new SolidColorBrush(bgColor);
                 }
+            }
 
+            private String FormatUnit(float value) {
+                if (value >= 1000000f) {
+                    return $"{value / 1000000f:#,0.0}M";
+                } else if (value >= 1000f) {
+                    return $"{value / 1000f:#,0.0}K";
+                } else {
+                    return $"{value:#,0}";
+                }
+            }
+        }
+    }
+
+    public static class CombatantExtentions
+    {
+        public static IList<Combatant> Separate(this IEnumerable<Combatant> combatants) {
+            return combatants.WithoutSeparated()
+                .Concat(combatants.AISCombatants())
+                .OrderByDescending(c => c.Damage)
+                .Concat(combatants.TurretCombatants())
+                .Concat(combatants.ZanverseCombatants())
+                .ToList();
+        }
+
+        private static IEnumerable<Combatant> WithoutSeparated(this IEnumerable<Combatant> combatants) {
+            foreach (var c in combatants) {
+                var result = new Combatant(c.ID, c.Name, c.Type);
+                result.Attacks = c.Attacks.WithoutSeparated().ToList();
+                yield return result;
             }
         }
 
-        public Brush Brush2 {
-            get {
-                if (Properties.Settings.Default.ShowDamageGraph && IsAlly) {
-                    return generateBarBrush(Color.FromArgb(140, 65, 112, 166), Color.FromArgb(64, 16, 16, 16));
-                } else {
-                    if (IsYou && Properties.Settings.Default.HighlightYourDamage)
-                        return new SolidColorBrush(green);
-                    return new SolidColorBrush(Color.FromArgb(64, 16, 16, 16));
-                }
+        private static IEnumerable<Combatant> AISCombatants(this IEnumerable<Combatant> combatants) {
+            if (!Properties.Settings.Default.SeparateAIS) {
+                yield break;
+            }
+            foreach (var c in combatants.Where(c => c.AISDamage > 0)) {
+                var result = new Combatant(c.ID, $"AIS|{c.Name}", Combatant.TypeEnum.IS_AIS);
+                result.Attacks = c.Attacks.Where(a => a.IsAIS).ToList();
+                yield return result;
             }
         }
 
-        LinearGradientBrush generateBarBrush(Color c, Color c2) {
-            if (!Properties.Settings.Default.ShowDamageGraph)
-                c = new Color();
-
-            if (IsYou && Properties.Settings.Default.HighlightYourDamage)
-                c = green;
-
-            LinearGradientBrush lgb = new LinearGradientBrush();
-            lgb.StartPoint = new System.Windows.Point(0, 0);
-            lgb.EndPoint = new System.Windows.Point(1, 0);
-            lgb.GradientStops.Add(new GradientStop(c, 0));
-            lgb.GradientStops.Add(new GradientStop(c, ReadDamage / maxShare));
-            lgb.GradientStops.Add(new GradientStop(c2, ReadDamage / maxShare));
-            lgb.GradientStops.Add(new GradientStop(c2, 1));
-            lgb.SpreadMethod = GradientSpreadMethod.Repeat;
-            return lgb;
+        private static IEnumerable<Combatant> TurretCombatants(this IEnumerable<Combatant> combatants) {
+            if (!Properties.Settings.Default.SeparateTurret) {
+                yield break;
+            }
+            var result = new Combatant("99999998", "Turret", Combatant.TypeEnum.IS_TURRET);
+            foreach (var c in combatants.Where(c => c.IsPlayer)) {
+                result.Attacks.AddRange(c.Attacks.Where(a => a.IsTurret));
+            }
+            if (result.TurretDamage > 0) {
+                yield return result;
+            }
         }
 
-        public static float maxShare = 0;
-
-
-        private String FormatNumber(float value) {
-            int num = (int)Math.Round(value);
-
-            if (value >= 100000000)
-                return (value / 1000000).ToString("#,0") + "M";
-            if (value >= 1000000)
-                return (value / 1000000D).ToString("0.0") + "M";
-            if (value >= 100000)
-                return (value / 1000).ToString("#,0") + "K";
-            if (value >= 1000)
-                return (value / 1000D).ToString("0.0") + "K";
-            return value.ToString("#,0");
-        }
-
-
-        public Combatant(string id, string name, TemporaryEnum temp) {
-            ID = id;
-            Name = name;
-            Attacks = new List<Attack>();
-            IsTemporary = temp;
-            PercentReadDPS = 0;
-            ActiveTime = 0;
-            green = Color.FromArgb(160, 32, 130, 32);
-        }
-
-        public Combatant(string id, string name) : this(id, name, TemporaryEnum.NOT_TEMPORARY) { }
-
-        public Combatant(Combatant other) : this(other.ID, other.Name, other.IsTemporary) {
-            Attacks = other.Attacks.Select(a => new Attack(a)).ToList();
-            PercentReadDPS = other.PercentReadDPS;
-            ActiveTime = other.ActiveTime;
+        private static IEnumerable<Combatant> ZanverseCombatants(this IEnumerable<Combatant> combatants) {
+            if (!Properties.Settings.Default.SeparateZanverse) {
+                yield break;
+            }
+            var result = new Combatant("99999999", "Zanverse", Combatant.TypeEnum.IS_ZANVERSE);
+            foreach (var c in combatants.Where(c => c.IsPlayer)) {
+                result.Attacks.AddRange(c.Attacks.Where(a => a.IsZanverse));
+            }
+            if (result.ZanverseDamage > 0) {
+                yield return result;
+            }
         }
     }
 }
