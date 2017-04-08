@@ -73,7 +73,7 @@ namespace OverParse.Models
 
         // (全体)
         public static float TotalDPS => TotalDamage / (float)ActiveTime;
-        public static string DisplayActiveTime => $"{TimeSpan.FromSeconds(ActiveTime):mm\\:ss}";
+        public static string DisplayActiveTime => ActiveTime > 3600 ? $"{TimeSpan.FromSeconds(ActiveTime):h\\:mm\\:ss}" : $"{TimeSpan.FromSeconds(ActiveTime):mm\\:ss}";
         public static string DisplayTotalDamage => $"{TotalDamage:#,0}";
         public static string DisplayTotalDPS => $"{TotalDPS:#,0.00}";
 
@@ -122,8 +122,27 @@ namespace OverParse.Models
         {
             public LogBinder(Combatant c) : base(c) { }
 
-            public string NormalLine => $"{Name} | {Damage} dmg | {Contribute} contrib | {DPS} DPS | Max: {MaxHit} | JA: {JA}";
+            public string NormalLine => $"{Name} | {Damage} dmg | {Contribute} contrib | {DPS} DPS | JA: {JA} | Max: {MaxHit}";
             public string DetailHeaderLine => $"###### {Name} - {Damage} dmg ({Contribute}) ######";
+
+            public IEnumerable<string> AttackDetailLines() {
+                var values = c.AttackDetails().OrderByDescending(x => x.Item2.Sum(a => a.Damage));
+                foreach (var value in values) {
+                    var name = value.Item1;
+                    var attacks = value.Item2;
+
+                    var percent = $"{attacks.Sum(a => a.Damage) * 100d / c.Damage:00.00}".Substring(0, 5);
+                    var hits = $"{attacks.Count():#,0}";
+                    var sum = $"{attacks.Sum(a => a.Damage):#,0}";
+                    var min = $"{attacks.Min(a => a.Damage):#,0}";
+                    var max = $"{attacks.Max(a => a.Damage):#,0}";
+                    var avg = $"{attacks.Average(a => a.Damage):#,0}";
+                    var ja = $"{attacks.PercentJA():0.0%}";
+
+                    yield return $"{percent}% | {name} ({sum} dmg)";
+                    yield return $"       |   {hits} hits - {min} min, {avg} avg, {max} max, {ja} ja";
+                }
+            }
         }
 
         public class FormBinder : BaseBinder

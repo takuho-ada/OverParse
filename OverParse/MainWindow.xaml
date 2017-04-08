@@ -9,12 +9,11 @@
         mc:Ignorable="d" AllowsTransparency="True" WindowStyle="None" Activated="Window_Activated"
         Title="OverParse" Height="270" Width="470" ResizeMode="CanResizeWithGrip" x:Name="TheWindow"
         Deactivated="Window_Deactivated" StateChanged="Window_StateChanged" Closing="Window_Closing" MouseDown="Window_MouseDown">
-
-
+    <!-- -->
     <Window.Background>
         <SolidColorBrush Opacity="0.0" Color="#FF101010"/>
     </Window.Background>
-
+    <!-- -->
     <Window.Resources>
         <Style TargetType="ListViewItem">
             <Setter Property="Height" Value="20"/>
@@ -33,7 +32,6 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
-
         <Style TargetType="ListView">
             <Setter Property="Background" Value="#FF101010"/>
             <Setter Property="Foreground" Value="White"/>
@@ -60,6 +58,7 @@
             <Setter Property="Margin" Value="0,0,0,0"/>
         </Style>
     </Window.Resources>
+    <!-- -->
     <Border BorderBrush="#FFB0D2ED" BorderThickness="1" CornerRadius="6" >
         <Border.Background>
             <SolidColorBrush x:Name="WinBorderBackground" Opacity="0.75" Color="#FF212a3a"/>
@@ -79,9 +78,8 @@
                                 <MenuItem Style="{StaticResource submenu}" x:Name="EndEncounter"      Header="End encounter"     InputGestureText="Ctrl+Shift+E" Click="LogMenu_Click"/>
                                 <MenuItem Style="{StaticResource submenu}" x:Name="EndEncounterNoLog" Header="Discard encounter" InputGestureText="Ctrl+Shift+R" Click="LogMenu_Click"/>
                                 <Separator />
-                                <MenuItem Style="{StaticResource submenu}" x:Name="AutoEndEncounters"   IsCheckable="True" IsChecked="True" Header="Automatically end encounters"    Click="LogMenu_Click"/>
-                                <MenuItem Style="{StaticResource submenu}" x:Name="SetEncounterTimeout"                                     Header="Set encounter timeout..."        Click="LogMenu_Click"/>
-                                <MenuItem Style="{StaticResource submenu}" x:Name="LogToClipboard"      IsCheckable="True" IsChecked="True" Header="Automatically copy to clipboard" Click="LogMenu_Click"/>
+                                <MenuItem Style="{StaticResource submenu}" x:Name="AutoEndEncounters"   Header="Automatically end encounters" Click="LogMenu_Click" IsCheckable="True" IsChecked="True"/>
+                                <MenuItem Style="{StaticResource submenu}" x:Name="SetEncounterTimeout" Header="Set encounter timeout..."     Click="LogMenu_Click"/>
                                 <Separator />
                                 <MenuItem Style="{StaticResource submenu}" x:Name="OpenLogsFolder" Header="Open logs folder..." Click="LogMenu_Click"/>
                                 <MenuItem Style="{StaticResource submenu}" x:Name="SessionLogs"    Header="Session logs">
@@ -101,6 +99,11 @@
                                 <MenuItem Style="{StaticResource submenu}" x:Name="ShowRawDPS"      IsCheckable="True" IsChecked="False" Header="Show raw DPS"      Click="ParseMenu_Click"/>
                                 <MenuItem Style="{StaticResource submenu}" x:Name="ShowDamageGraph" IsCheckable="True" IsChecked="False" Header="Show damage graph" Click="ParseMenu_Click"/>
                                 <MenuItem Style="{StaticResource submenu}" x:Name="AnonymizeNames"  IsCheckable="True" IsChecked="False" Header="Anonymize names"   Click="ParseMenu_Click"/>
+                                <Separator />
+                                <MenuItem Style="{StaticResource submenu}" Header="Skill language">
+                                    <MenuItem Style="{StaticResource submenu}" x:Name="SkillEN" IsCheckable="True" IsChecked="False" Header="English"  Click="ParseMenu_Click"/>
+                                    <MenuItem Style="{StaticResource submenu}" x:Name="SkillJA" IsCheckable="True" IsChecked="False" Header="Japanese" Click="ParseMenu_Click"/>
+                                </MenuItem>
                             </MenuItem>
                             <MenuItem Style="{StaticResource topmenu}" Background="Transparent" Header="Window">
                                 <MenuItem Style="{StaticResource submenu}" IsCheckable="True" IsChecked="True" Header="Compact mode"          x:Name="CompactMode"         Click="WindowMenu_Click"/>
@@ -125,7 +128,6 @@
                                 <MenuItem Style="{StaticResource submenu}" IsCheckable="True" IsChecked="False" Header="Clickthrough while inactive" x:Name="ClickthroughMode" Click="WindowMenu_Click" />
                             </MenuItem>
                             <MenuItem Style="{StaticResource topmenu}" x:Name="DebugMenu" Visibility="Collapsed" Background="Transparent" Header="Debug">
-                                <MenuItem Style="{StaticResource submenu}" Header="Generate fake entries" x:Name="GenerateFakeEntries" Click="DebugMenu_Click"/>
                                 <MenuItem Style="{StaticResource submenu}" Header="Window stats"          x:Name="WindowStats"         Click="DebugMenu_Click"/>
                                 <MenuItem Style="{StaticResource submenu}" Header="Current log filename"  x:Name="CurrentLogFilename"  Click="DebugMenu_Click"/>
                                 <Separator />
@@ -189,7 +191,7 @@
                                 <GridViewColumn Header="Damage" x:Name="DamageColumn" Width="{Binding ElementName=DamageHelper, Path=ActualWidth}">
                                     <GridViewColumn.CellTemplate>
                                         <DataTemplate>
-                                            <TextBlock Margin="-4,0" Text="{Binding Damage}" TextAlignment="Left"/>
+                                            <TextBlock Margin="-4,0" Text="{Binding Damage}" TextAlignment="Right"/>
                                         </DataTemplate>
                                     </GridViewColumn.CellTemplate>
                                 </GridViewColumn>

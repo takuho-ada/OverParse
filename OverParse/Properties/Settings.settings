@@ -32,9 +32,6 @@
     <Setting Name="ClickthroughEnabled" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
     </Setting>
-    <Setting Name="LogToClipboard" Type="System.Boolean" Scope="User">
-      <Value Profile="(Default)">False</Value>
-    </Setting>
     <Setting Name="FirstRun" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
@@ -106,6 +103,9 @@
     </Setting>
     <Setting Name="DebugReadEnd" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">0</Value>
+    </Setting>
+    <Setting Name="SkillLanguage" Type="System.String" Scope="User">
+      <Value Profile="(Default)">EN</Value>
     </Setting>
   </Settings>
 </SettingsFile>

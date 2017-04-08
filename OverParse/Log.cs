@@ -122,9 +122,9 @@ namespace OverParse
 
             // Debug for ID mapping
             foreach (var c in Combatants.Where(c => c.IsPlayer)) {
-                foreach (Attack a in c.Attacks.Where(a => !a.HasName)) {
+                foreach (var a in c.Attacks.Where(a => !a.HasName)) {
                     TimeSpan t = TimeSpan.FromSeconds(a.Elapse);
-                    Console.WriteLine($"{t.ToString(@"dd\.hh\:mm\:ss")} unmapped: {a.ID} ({a.Damage} dmg from {c.Name})");
+                    Console.WriteLine($"{t.ToString("dd\\.hh\\:mm\\:ss")} unmapped: {a.ID} ({a.Damage} dmg from {c.Name})");
                 }
             }
 
@@ -148,28 +148,12 @@ namespace OverParse
             log.AppendLine();
 
             // 一覧(詳細)
-            foreach (var c in work) {
-                log.AppendLine($"###### {c.Name} - {c.Damage:#,0} dmg ({c.Contribute:0.0%}) ######");
+            foreach (var c in work.Select(c => new Combatant.LogBinder(c))) {
+                log.AppendLine(c.DetailHeaderLine);
                 log.AppendLine();
-
-                var attackData = c.AttackDetails();
-
-                foreach (var i in attackData.OrderByDescending(x => x.Item2.Sum(a => a.Damage))) {
-                    var attacks = i.Item2;
-                    var percent = attacks.Sum(a => a.Damage) * 100d / c.Damage;
-
-                    var paddedPercent = percent.ToString("00.00").Substring(0, 5);
-                    var hits = attacks.Count().ToString("N0");
-                    var sum = attacks.Sum(a => a.Damage).ToString("N0");
-                    var min = attacks.Min(a => a.Damage).ToString("N0");
-                    var max = attacks.Max(a => a.Damage).ToString("N0");
-                    var avg = attacks.Average(a => a.Damage).ToString("N0");
-                    var ja = $"{attacks.PercentJA():0.0%}";
-
-                    log.AppendLine($"{paddedPercent}% | {i.Item1} ({sum} dmg)");
-                    log.AppendLine($"       |   {hits} hits - {min} min, {avg} avg, {max} max, {ja} ja");
+                foreach (var line in c.AttackDetailLines()) {
+                    log.AppendLine(line);
                 }
-
                 log.AppendLine();
             }
 
@@ -181,67 +165,6 @@ namespace OverParse
             var fileinfo = new FileInfo($"Logs/{now.ToString("yyyy-MM-dd")}/OverParse - {now.ToString("yyyy-MM-dd_HH-mm-ss")}.txt");
             File.WriteAllText(fileinfo.FullName, log.ToString());
             return fileinfo;
-        }
-
-        public void WriteClipboard() {
-            Func<int, string> FormatNumber = (int value) => {
-                if (value >= 100000000) {
-                    return (value / 1000000).ToString("#,0") + "M";
-                } else if (value >= 1000000) {
-                    return (value / 1000000D).ToString("0.#") + "M";
-                } else if (value >= 100000) {
-                    return (value / 1000).ToString("#,0") + "K";
-                } else if (value >= 1000) {
-                    return (value / 1000D).ToString("0.#") + "K";
-                } else {
-                    return value.ToString("#,0");
-                }
-            };
-            var log = new StringBuilder();
-            foreach (Combatant c in Combatants.Where(c => c.IsPlayer)) {
-                var shortname = c.Name.Substring(0, 4);
-                log.AppendLine($"{shortname} {FormatNumber(c.Damage)}");
-            }
-            if (log.Length == 0) {
-                return;
-            }
-            try {
-                Clipboard.SetText(log.ToString());
-            } catch {
-                //LMAO
-            }
-        }
-
-        public string logStatus() {
-            if (!Valid) {
-                return "USER SHOULD PROBABLY NEVER SEE THIS";
-            }
-            if (Empty) {
-                return "No logs: Enable plugin and check pso2_bin!";
-            }
-            if (!Running) {
-                return "Waiting for combat data...";
-            }
-            return "00:00 - ∞ DPS";
-        }
-
-        public void GenerateFakeEntries() {
-            Random random = new Random();
-
-            for (int i = 0; i <= 12; i++) {
-                Combatant temp = new Combatant("1000000" + i.ToString(), "TestPlayer_" + random.Next(0, 99).ToString());
-                Combatants.Add(temp);
-            }
-
-            for (int i = 0; i <= 9; i++) {
-                Combatant temp = new Combatant(i.ToString(), "TestEnemy_" + i.ToString());
-                Combatants.Add(temp);
-            }
-
-            Combatants.Sort((x, y) => y.DPS.CompareTo(x.DPS));
-
-            Valid = true;
-            Running = true;
         }
 
         private void SetupEnvironment(string attemptDirectory) {

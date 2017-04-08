@@ -30,26 +30,23 @@ namespace OverParse.Models
         private static readonly string ZanverseID = "2106601422";
         private static readonly SkillDictionary dic = SkillDictionary.GetInstance();
 
-        public string ID { get; private set; }
-        public string UserID { get; private set; }
-        public string UserName { get; private set; }
-        public int Damage { get; private set; }
+        public string ID => dump.AttackID;
+        public string UserID => dump.SourceID;
+        public string UserName => dump.SourceName;
+        public int Damage => dump.Damage;
         public int Elapse { get; private set; }
-        public bool IsJA { get; private set; }
-        public bool IsCritical { get; private set; }
+        public bool IsJA => dump.IsJA;
+        public bool IsCritical => dump.IsCritical;
+
+        private DamageDump dump;
 
         public override string ToString() {
             return $"{base.ToString()} - ID: {ID}, UserID: {UserID}, UserName: {UserName}, Damage: {Damage}, Elapse: {Elapse}, IsJA: {IsJA}, IsCritical: {IsCritical}";
         }
 
         public Attack(DamageDump dump, int elapse) {
-            this.ID = dump.AttackID;
-            this.UserID = dump.SourceID;
-            this.UserName = dump.SourceName;
-            this.Damage = dump.Damage;
+            this.dump = dump;
             this.Elapse = elapse;
-            this.IsJA = dump.IsJA;
-            this.IsCritical = dump.IsCritical;
         }
 
         public bool HasName => dic.ContainsKey(ID);

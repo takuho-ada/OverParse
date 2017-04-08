@@ -95,7 +95,6 @@ namespace OverParse
             // -> Logging
             Console.WriteLine($"{nameof(AutoEndEncounters)}  : {AutoEndEncounters.IsChecked = Properties.Settings.Default.AutoEndEncounters}");
             Console.WriteLine($"{nameof(SetEncounterTimeout)}: {SetEncounterTimeout.IsEnabled = AutoEndEncounters.IsChecked}");
-            Console.WriteLine($"{nameof(LogToClipboard)}     : {LogToClipboard.IsChecked = Properties.Settings.Default.LogToClipboard}");
             // -> Parsing
             Console.WriteLine($"{nameof(SeparateZanverse)}   : {SeparateZanverse.IsChecked = Properties.Settings.Default.SeparateZanverse}");
             Console.WriteLine($"{nameof(SeparateTurret)}     : {SeparateTurret.IsChecked = Properties.Settings.Default.SeparateTurret}");
@@ -105,6 +104,8 @@ namespace OverParse
             Console.WriteLine($"{nameof(ShowRawDPS)}         : {ShowRawDPS.IsChecked = Properties.Settings.Default.ShowRawDPS}");
             Console.WriteLine($"{nameof(ShowDamageGraph)}    : {ShowDamageGraph.IsChecked = Properties.Settings.Default.ShowDamageGraph}");
             Console.WriteLine($"{nameof(AnonymizeNames)}     : {AnonymizeNames.IsChecked = Properties.Settings.Default.AnonymizeNames}");
+            Console.WriteLine($"{nameof(SkillEN)}            : {SkillEN.IsChecked = Properties.Settings.Default.SkillLanguage == "EN"}");
+            Console.WriteLine($"{nameof(SkillJA)}            : {SkillJA.IsChecked = Properties.Settings.Default.SkillLanguage == "JA"}");
             // -> Window
             Console.WriteLine($"{nameof(CompactMode)}        : {CompactMode.IsChecked = Properties.Settings.Default.CompactMode}");
             Console.WriteLine($"{nameof(HighlightYourDamage)}: {HighlightYourDamage.IsChecked = Properties.Settings.Default.HighlightYourDamage}");
@@ -184,7 +185,8 @@ namespace OverParse
             }
 
             // スキル辞書の初期化
-            SkillDictionary.GetInstance().Initialize(SkillDictionary.LanguageEnum.JA, (success, skillCsv) => {
+            var language = SkillJA.IsChecked ? SkillDictionary.LanguageEnum.JA : SkillDictionary.LanguageEnum.EN;
+            SkillDictionary.GetInstance().Initialize(language, (success, skillCsv) => {
                 if (success) {
                     return;
                 }
@@ -322,7 +324,6 @@ namespace OverParse
             }
 
             EncounterLog.UpdateLog();
-            SetStatus(EncounterLog.logStatus());
 
             // 戦闘データをコピー(何のためかはよく分かってない)
             var work = (EncounterLog.Running ? EncounterLog.Combatants : LastCombatants).Separate().ToList();
@@ -350,7 +351,15 @@ namespace OverParse
                 var status = string.IsNullOrEmpty(LastStatus) ? "Waiting for combat data..." : $"Waiting - {LastStatus}";
                 SetStatus(status, Color.FromArgb(255, 255, 255, 0));
             } else {
-                SetStatus(EncounterLog.logStatus(), Color.FromArgb(255, 255, 100, 100));
+                var status = "00:00 - ∞ DPS";
+                if (!EncounterLog.Valid) {
+                    status = "USER SHOULD PROBABLY NEVER SEE THIS";
+                } else  if (EncounterLog.Empty) {
+                    status = "No logs: Enable plugin and check pso2_bin!";
+                } else  if (!EncounterLog.Running) {
+                    status = "Waiting for combat data...";
+                }
+                SetStatus(status, Color.FromArgb(255, 255, 100, 100));
             }
 
             // 自動終了(ログ出力とか)
@@ -383,9 +392,6 @@ namespace OverParse
                     Process.Start(fileinfo.FullName);
                 };
                 SessionLogs.Items.Add(menuItem);
-            }
-            if (Properties.Settings.Default.LogToClipboard) {
-                EncounterLog.WriteClipboard();
             }
             // 初期化
             Console.WriteLine("Reinitializing log");
@@ -431,7 +437,7 @@ namespace OverParse
                 { 1.00, ListOpacity_100 },
             };
             foreach (var item in items) {
-                item.Value.IsChecked = (item.Key == Properties.Settings.Default.WindowOpacity);
+                item.Value.IsChecked = (item.Key == Properties.Settings.Default.ListOpacity);
             }
         }
 
@@ -504,9 +510,6 @@ namespace OverParse
                 }
                 AlwaysOnTop.IsChecked = Properties.Settings.Default.AlwaysOnTop;
                 break;
-            case nameof(LogToClipboard):
-                Properties.Settings.Default.LogToClipboard = LogToClipboard.IsChecked;
-                break;
             case nameof(OpenLogsFolder):
                 Process.Start($"{Directory.GetCurrentDirectory()}\\Logs");
                 break;
@@ -561,6 +564,20 @@ namespace OverParse
                 break;
             case nameof(AnonymizeNames):
                 Properties.Settings.Default.AnonymizeNames = AnonymizeNames.IsChecked;
+                UpdateFormImpl();
+                break;
+            case nameof(SkillEN):
+                Properties.Settings.Default.SkillLanguage = "EN";
+                SkillEN.IsChecked = true;
+                SkillJA.IsChecked = false;
+                SkillDictionary.GetInstance().Initialize(SkillDictionary.LanguageEnum.EN);
+                UpdateFormImpl();
+                break;
+            case nameof(SkillJA):
+                Properties.Settings.Default.SkillLanguage = "JA";
+                SkillEN.IsChecked = false;
+                SkillJA.IsChecked = true;
+                SkillDictionary.GetInstance().Initialize(SkillDictionary.LanguageEnum.JA);
                 UpdateFormImpl();
                 break;
             }
@@ -649,9 +666,6 @@ namespace OverParse
         /// <param name="e"></param>
         private void DebugMenu_Click(object sender, RoutedEventArgs e) {
             switch (((MenuItem)sender).Name) {
-            case nameof(GenerateFakeEntries):
-                EncounterLog.GenerateFakeEntries();
-                break;
             case nameof(WindowStats):
                 var result = new StringBuilder();
                 result.AppendLine($"menu bar: {MenuBar.Width.ToString()} width {MenuBar.Height.ToString()} height");
@@ -729,9 +743,6 @@ namespace OverParse
         /// <param name="e"></param>
         private void LinkMenu_Click(object sender, RoutedEventArgs e) {
             switch (((MenuItem)sender).Name) {
-            case "Website": //nameof(Website):
-                Process.Start("http://www.tyronesama.moe/");
-                break;
             case nameof(PSOWorld):
                 Process.Start("http://www.pso-world.com/forums/showthread.php?t=232386");
                 break;

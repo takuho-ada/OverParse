@@ -145,18 +145,6 @@ namespace OverParse.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool LogToClipboard {
-            get {
-                return ((bool)(this["LogToClipboard"]));
-            }
-            set {
-                this["LogToClipboard"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
         public bool FirstRun {
             get {
@@ -440,6 +428,18 @@ namespace OverParse.Properties {
             }
             set {
                 this["DebugReadEnd"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("EN")]
+        public string SkillLanguage {
+            get {
+                return ((string)(this["SkillLanguage"]));
+            }
+            set {
+                this["SkillLanguage"] = value;
             }
         }
     }
