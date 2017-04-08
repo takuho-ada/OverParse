@@ -128,6 +128,10 @@
                                 <MenuItem Style="{StaticResource submenu}" Header="Generate fake entries" x:Name="GenerateFakeEntries" Click="DebugMenu_Click"/>
                                 <MenuItem Style="{StaticResource submenu}" Header="Window stats"          x:Name="WindowStats"         Click="DebugMenu_Click"/>
                                 <MenuItem Style="{StaticResource submenu}" Header="Current log filename"  x:Name="CurrentLogFilename"  Click="DebugMenu_Click"/>
+                                <Separator />
+                                <MenuItem Style="{StaticResource submenu}" x:Name="ReadDamagelog" Header="Read damagelog">
+                                </MenuItem>
+                                <MenuItem Style="{StaticResource submenu}" x:Name="ReadDamagelogOffset" Click="DebugMenu_Click"/>
                             </MenuItem>
                             <MenuItem Style="{StaticResource topmenu}" Background="Transparent" Header="Help">
                                 <MenuItem Style="{StaticResource submenu}" Header="About" x:Name="About" Click="HelpMenu_Click"/>

@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 
 namespace OverParse.Models
@@ -39,6 +38,10 @@ namespace OverParse.Models
         public bool IsJA { get; private set; }
         public bool IsCritical { get; private set; }
 
+        public override string ToString() {
+            return $"{base.ToString()} - ID: {ID}, UserID: {UserID}, UserName: {UserName}, Damage: {Damage}, Elapse: {Elapse}, IsJA: {IsJA}, IsCritical: {IsCritical}";
+        }
+
         public Attack(DamageDump dump, int elapse) {
             this.ID = dump.AttackID;
             this.UserID = dump.SourceID;
@@ -60,7 +63,15 @@ namespace OverParse.Models
 
     public static class AttackExtenstions
     {
-        public static IEnumerable<Attack> WithoutZanverse(this IEnumerable<Attack> attacks) {
+        public static float PercentJA(this IEnumerable<Attack> attacks) {
+            return attacks.Count(a => a.IsJA) / (float)attacks.Count();
+        }
+
+        public static IEnumerable<Attack> WithoutSeparated(this IEnumerable<Attack> attacks) {
+            return attacks.WithoutZanverse().WithoutTurret().WithoutAIS();
+        }
+
+        private static IEnumerable<Attack> WithoutZanverse(this IEnumerable<Attack> attacks) {
             if (Properties.Settings.Default.SeparateZanverse) {
                 return attacks.Where(a => !a.IsZanverse);
             } else {
@@ -68,7 +79,7 @@ namespace OverParse.Models
             }
         }
 
-        public static IEnumerable<Attack> WithoutTurret(this IEnumerable<Attack> attacks) {
+        private static IEnumerable<Attack> WithoutTurret(this IEnumerable<Attack> attacks) {
             if (Properties.Settings.Default.SeparateTurret) {
                 return attacks.Where(a => !a.IsTurret);
             } else {
@@ -76,20 +87,12 @@ namespace OverParse.Models
             }
         }
 
-        public static IEnumerable<Attack> WithoutAIS(this IEnumerable<Attack> attacks) {
+        private static IEnumerable<Attack> WithoutAIS(this IEnumerable<Attack> attacks) {
             if (Properties.Settings.Default.SeparateAIS) {
                 return attacks.Where(a => !a.IsAIS);
             } else {
                 return attacks;
             }
-        }
-
-        public static IEnumerable<Attack> WithoutSeparated(this IEnumerable<Attack> attacks) {
-            return attacks.WithoutZanverse().WithoutTurret().WithoutAIS();
-        }
-
-        public static float PercentJA(this IEnumerable<Attack> attacks) {
-            return attacks.Count(a => a.IsJA) / (float)attacks.Count();
         }
     }
 }

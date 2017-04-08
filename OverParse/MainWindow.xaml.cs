@@ -19,18 +19,14 @@ namespace OverParse
 {
     public partial class MainWindow : Window
     {
-        private Log encounterlog;
-        private List<Combatant> lastCombatants = new List<Combatant>();
-        private List<string> sessionLogFilenames = new List<string>();
-        private string lastStatus = "";
-        private IntPtr hwndcontainer;
-        IList<Combatant> workingList;
+        private Log EncounterLog { get; set; }
+        private List<Combatant> LastCombatants { get; set; } = new List<Combatant>();
+        private string LastStatus { get; set; }
+        private IntPtr hWnd { get; set; }
 
         protected override void OnSourceInitialized(EventArgs e) {
             base.OnSourceInitialized(e);
-            // Get this window's handle
-            IntPtr hwnd = new WindowInteropHelper(this).Handle;
-            hwndcontainer = hwnd;
+            hWnd = new WindowInteropHelper(this).Handle;
         }
 
         public MainWindow() {
@@ -57,11 +53,12 @@ namespace OverParse
             Directory.CreateDirectory("Debug");
 
             // 標準出力・エラーをデバッグファイルに出力
-            var filestream = new FileStream($"Debug\\log_{DateTime.Now:yyyy-MM-dd_hh-mm-ss-tt}.txt", FileMode.Create);
-            var streamwriter = new StreamWriter(filestream);
-            streamwriter.AutoFlush = true;
-            Console.SetOut(streamwriter);
-            Console.SetError(streamwriter);
+            var dFileStream = new FileStream($"Debug\\log_{DateTime.Now:yyyy-MM-dd_hh-mm-ss-tt}.txt", FileMode.Create);
+            var dStreamWriter = new StreamWriter(dFileStream);
+            var dSyncWriter = TextWriter.Synchronized(dStreamWriter);
+            dStreamWriter.AutoFlush = true;
+            Console.SetOut(dSyncWriter);
+            Console.SetError(dSyncWriter);
 
             // バージョン情報出力
             Console.WriteLine($"OVERPARSE V.{Assembly.GetExecutingAssembly().GetName().Version}");
@@ -103,6 +100,8 @@ namespace OverParse
             Console.WriteLine($"{nameof(SeparateZanverse)}   : {SeparateZanverse.IsChecked = Properties.Settings.Default.SeparateZanverse}");
             Console.WriteLine($"{nameof(SeparateTurret)}     : {SeparateTurret.IsChecked = Properties.Settings.Default.SeparateTurret}");
             Console.WriteLine($"{nameof(SeparateAIS)}        : {SeparateAIS.IsChecked = Properties.Settings.Default.SeparateAIS}");
+            Console.WriteLine($"{nameof(HidePlayers)}        : {HidePlayers.IsChecked = Properties.Settings.Default.HidePlayers}");
+            Console.WriteLine($"{nameof(HideAIS)}            : {HideAIS.IsChecked = Properties.Settings.Default.HideAIS}");
             Console.WriteLine($"{nameof(ShowRawDPS)}         : {ShowRawDPS.IsChecked = Properties.Settings.Default.ShowRawDPS}");
             Console.WriteLine($"{nameof(ShowDamageGraph)}    : {ShowDamageGraph.IsChecked = Properties.Settings.Default.ShowDamageGraph}");
             Console.WriteLine($"{nameof(AnonymizeNames)}     : {AnonymizeNames.IsChecked = Properties.Settings.Default.AnonymizeNames}");
@@ -117,6 +116,17 @@ namespace OverParse
             // 不透明度の反映
             HandleWindowOpacity();
             HandleListOpacity();
+
+            // デバッグ用
+            {
+                var debugBeg = Properties.Settings.Default.DebugReadBegin;
+                var debugEnd = Properties.Settings.Default.DebugReadEnd;
+                if (debugBeg == 0 && debugEnd == 0) {
+                    ReadDamagelogOffset.Header = "Line: All";
+                } else {
+                    ReadDamagelogOffset.Header = $"Line: {debugBeg}-{debugEnd}";
+                }
+            }
 
             // 追加で設定が必要な項目を無理矢理処理
             ParseMenu_Click(SeparateAIS, null);
@@ -137,13 +147,13 @@ namespace OverParse
                 // Ctrl + Shift + E => DPS計測の終了(ログ出力)
                 HotkeyManager.Current.AddOrReplace("End Encounter", Key.E, ModifierKeys.Control | ModifierKeys.Shift, (sender, e) => {
                     Console.WriteLine("Encounter hotkey pressed");
-                    EndEncounterImpl(null, null);
+                    EndEncounterImpl();
                     e.Handled = true;
                 });
                 // Ctrl + Shift + R => DPS計測のリセット(ログ出力なし)
                 HotkeyManager.Current.AddOrReplace("End Encounter (No log)", Key.R, ModifierKeys.Control | ModifierKeys.Shift, (sender, e) => {
                     Console.WriteLine("Encounter hotkey (no log) pressed");
-                    EndEncounterNoLogImpl(null, null);
+                    EndEncounterNoLogImpl();
                     e.Handled = true;
                 });
                 // Ctrl + Shift + E => デバッグメニュー表示切替え
@@ -174,18 +184,28 @@ namespace OverParse
             }
 
             // スキル辞書の初期化
-            if (!SkillDictionary.GetInstance().Initialize(SkillDictionary.LanguageEnum.JA)) {
-                if (File.Exists(SkillDictionary.SkillCSVName)) {
+            SkillDictionary.GetInstance().Initialize(SkillDictionary.LanguageEnum.JA, (success, skillCsv) => {
+                if (success) {
+                    return;
+                }
+                if (skillCsv.Exists) {
                     MessageBox.Show(Properties.Resources.E0004, "OverParse Setup", MessageBoxButton.OK, MessageBoxImage.Information);
                 } else {
                     MessageBox.Show(Properties.Resources.E0005, "OverParse Setup", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
-            }
+            });
 
             // ログ読込み開始
             Console.WriteLine("Initializing default log");
-            encounterlog = new Log(Properties.Settings.Default.Path);
-            UpdateForm(null, null);
+            EncounterLog = new Log(Properties.Settings.Default.Path);
+            foreach (var file in EncounterLog.Damagelogs()) {
+                var item = new MenuItem() { Header = file.Name };
+                item.Click += (sender, e) => {
+                    EncounterLog.DebugLoadLog(file, Properties.Settings.Default.DebugReadBegin, Properties.Settings.Default.DebugReadEnd);
+                };
+                ReadDamagelog.Items.Add(item);
+            }
+            UpdateFormImpl();
 
             // タイマー設定
             Console.WriteLine("Initializing timers");
@@ -195,9 +215,9 @@ namespace OverParse
                 timer.Interval = interval;
                 timer.Start();
             };
-            SetTimer(new EventHandler(UpdateForm), TimeSpan.FromSeconds(1));       // DPS計測の更新(1秒毎)
-            SetTimer(new EventHandler(HideIfInactive), TimeSpan.FromSeconds(0.2)); // 非アクティブで隠す(0.2秒毎)
-            SetTimer(new EventHandler(CheckForNewLog), TimeSpan.FromSeconds(10));  // ログファイルの更新チェック(10秒毎)
+            SetTimer(new EventHandler((sender, e) => UpdateFormImpl()), TimeSpan.FromSeconds(1)); // DPS計測の更新(1秒毎)
+            SetTimer(new EventHandler(HideIfInactive), TimeSpan.FromSeconds(0.2));                // 非アクティブで隠す(0.2秒毎)
+            SetTimer(new EventHandler(CheckForNewLog), TimeSpan.FromSeconds(10));                 // ログファイルの更新チェック(10秒毎)
 
             // 更新の確認(あとで)
             Console.WriteLine("Checking for release updates");
@@ -246,8 +266,8 @@ namespace OverParse
             var window = (Window)sender;
             window.Topmost = AlwaysOnTop.IsChecked;
             if (Properties.Settings.Default.ClickthroughEnabled) {
-                var extendedStyle = WindowsServices.GetWindowLong(hwndcontainer, WindowsServices.GWL_EXSTYLE);
-                WindowsServices.SetWindowLong(hwndcontainer, WindowsServices.GWL_EXSTYLE, extendedStyle & ~WindowsServices.WS_EX_TRANSPARENT);
+                var extendedStyle = WindowsServices.GetWindowLong(hWnd, WindowsServices.GWL_EXSTYLE);
+                WindowsServices.SetWindowLong(hWnd, WindowsServices.GWL_EXSTYLE, extendedStyle & ~WindowsServices.WS_EX_TRANSPARENT);
             }
         }
 
@@ -255,8 +275,8 @@ namespace OverParse
             Window window = (Window)sender;
             window.Topmost = AlwaysOnTop.IsChecked;
             if (Properties.Settings.Default.ClickthroughEnabled) {
-                int extendedStyle = WindowsServices.GetWindowLong(hwndcontainer, WindowsServices.GWL_EXSTYLE);
-                WindowsServices.SetWindowLong(hwndcontainer, WindowsServices.GWL_EXSTYLE, extendedStyle | WindowsServices.WS_EX_TRANSPARENT);
+                int extendedStyle = WindowsServices.GetWindowLong(hWnd, WindowsServices.GWL_EXSTYLE);
+                WindowsServices.SetWindowLong(hWnd, WindowsServices.GWL_EXSTYLE, extendedStyle | WindowsServices.WS_EX_TRANSPARENT);
             }
         }
 
@@ -283,129 +303,103 @@ namespace OverParse
                     Properties.Settings.Default.Maximized = false;
                 }
             }
-            encounterlog.WriteLog();
+            EncounterLog.WriteLog();
             Properties.Settings.Default.Save();
         }
 
         // ***** 処理いろいろ ***** //
 
-        public void UpdateForm(object sender, EventArgs e) {
-            if (encounterlog == null) {
+        public void SetStatus(string status, Nullable<Color> color = null) {
+            if (color.HasValue) {
+                EncounterIndicator.Fill = new SolidColorBrush(color.Value);
+            }
+            EncounterStatus.Content = status;
+        }
+
+        public void UpdateFormImpl() {
+            if (EncounterLog == null) {
                 return;
             }
 
-            encounterlog.UpdateLog(this, null);
-            EncounterStatus.Content = encounterlog.logStatus();
-
-            // every part of this section is fucking stupid
+            EncounterLog.UpdateLog();
+            SetStatus(EncounterLog.logStatus());
 
             // 戦闘データをコピー(何のためかはよく分かってない)
-            var targetList = (encounterlog.Runnint ? encounterlog.Combatants : lastCombatants);
-            workingList = targetList.Separate();
-            Combatant.Update(workingList);
+            var work = (EncounterLog.Running ? EncounterLog.Combatants : LastCombatants).Separate().ToList();
+            Combatant.Update(work);
 
-            // フォーム表示をクリア
+            // フォーム表示を更新
             CombatantData.Items.Clear();
-
-            // damage graph stuff
-            foreach (var c in workingList) {
-                var filtered = true;
-                if (Properties.Settings.Default.SeparateAIS) {
-                    if (c.IsPlayer && c.IsDefault && !HidePlayers.IsChecked) {
-                        filtered = false;
-                    } else if (c.IsPlayer && c.IsAIS && !HideAIS.IsChecked) {
-                        filtered = false;
-                    } else if (c.IsZanverse || c.IsTurret) {
-                        filtered = false;
-                    }
-                } else {
-                    if (c.IsPlayer || c.IsZanverse || c.IsTurret) {
-                        filtered = false;
-                    }
-                }
-                if (!filtered && c.Damage > 0) {
-                    CombatantData.Items.Add(new Combatant.FormBinder(c));
-                }
+            foreach (var c in work.Select(c => new Combatant.FormBinder(c))) {
+                CombatantData.Items.Add(c);
             }
+            CombatantData.Items.Refresh();
 
             // ステータス表示の更新
-            if (encounterlog.Runnint) {
-                EncounterIndicator.Fill = new SolidColorBrush(Color.FromArgb(255, 100, 255, 100));
-                EncounterStatus.Content = $"{Combatant.DisplayActiveTime} - {Combatant.DisplayTotalDamage} dmg - {Combatant.DisplayTotalDPS} DPS";
+            if (EncounterLog.Running) {
+                var status = $"{Combatant.DisplayActiveTime} - {Combatant.DisplayTotalDamage} dmg - {Combatant.DisplayTotalDPS} DPS";
                 if (Properties.Settings.Default.CompactMode) {
-                    var target = workingList.FirstOrDefault(c => c.IsYou);
+                    var target = work.FirstOrDefault(c => c.IsYou);
                     if (target != null) {
-                        EncounterStatus.Content += $" - MAX: {target.MaxHitDamage:N0}";
+                        status += $" - MAX: {target.MaxHitDamage:N0}";
                     }
                 }
-                CombatantData.Items.Refresh();
-                lastStatus = EncounterStatus.Content.ToString();
-            } else if (encounterlog.Valid && !encounterlog.Empty) {
-                EncounterIndicator.Fill = new SolidColorBrush(Color.FromArgb(255, 255, 255, 0));
-                if (lastStatus.Length == 0) {
-                    EncounterStatus.Content = "Waiting for combat data...";
-                } else {
-                    EncounterStatus.Content = $"Waiting - {lastStatus}";
-                }
-                CombatantData.Items.Refresh();
+                SetStatus(status, Color.FromArgb(255, 100, 255, 100));
+                LastStatus = EncounterStatus.Content.ToString();
+            } else if (EncounterLog.Valid && !EncounterLog.Empty) {
+                var status = string.IsNullOrEmpty(LastStatus) ? "Waiting for combat data..." : $"Waiting - {LastStatus}";
+                SetStatus(status, Color.FromArgb(255, 255, 255, 0));
             } else {
-                EncounterIndicator.Fill = new SolidColorBrush(Color.FromArgb(255, 255, 100, 100));
-                EncounterStatus.Content = encounterlog.logStatus();
+                SetStatus(EncounterLog.logStatus(), Color.FromArgb(255, 255, 100, 100));
             }
 
             // 自動終了(ログ出力とか)
-            if (encounterlog.Runnint && Properties.Settings.Default.AutoEndEncounters) {
-                int unixTimestamp = (int)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
-                if ((unixTimestamp - encounterlog.TimestampEnd) >= Properties.Settings.Default.EncounterTimeout) {
+            if (EncounterLog.Running && Properties.Settings.Default.AutoEndEncounters) {
+                var unixTimestamp = (int)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
+                if ((unixTimestamp - EncounterLog.TimestampEnd) >= Properties.Settings.Default.EncounterTimeout) {
                     Console.WriteLine("Automatically ending an encounter");
-                    EndEncounterImpl(null, null);
+                    EndEncounterImpl();
                 }
             }
         }
 
-        private void EndEncounterImpl(object sender, EventArgs e) {
+        private void EndEncounterImpl() {
             Console.WriteLine("Ending encounter");
-            bool temp = Properties.Settings.Default.AutoEndEncounters;
-            Properties.Settings.Default.AutoEndEncounters = false;
-            UpdateForm(null, null); // I'M FUCKING STUPID
-            Properties.Settings.Default.AutoEndEncounters = temp;
-
-            var workingListCopy = workingList.Select(c => new Combatant(c)).ToList();
+            EncounterLog.UpdateLog();
+            if (!EncounterLog.Running) {
+                return;
+            }
             Console.WriteLine("Saving last combatant list");
-            lastCombatants = encounterlog.Combatants;
-            encounterlog.Combatants = workingListCopy;
-            string filename = encounterlog.WriteLog();
-            if (filename != null) {
-                if ((SessionLogs.Items[0] as MenuItem).Name == "SessionLogPlaceholder")
+            LastCombatants = EncounterLog.Combatants;
+            // ログファイルを出力して一覧に追加
+            var fileinfo = EncounterLog.WriteLog();
+            if (fileinfo != null) {
+                if ((SessionLogs.Items[0] as MenuItem).Name == "SessionLogPlaceholder") {
                     SessionLogs.Items.Clear();
-                int items = SessionLogs.Items.Count;
-
-                string prettyName = filename.Split('/').LastOrDefault();
-
-                sessionLogFilenames.Add(filename);
-
-                var menuItem = new MenuItem() { Name = "SessionLog_" + items.ToString(), Header = prettyName };
-                menuItem.Click += OpenRecentLog_Click;
+                }
+                var menuItem = new MenuItem() { Header = fileinfo.Name };
+                menuItem.Click += (sender, e) => {
+                    Console.WriteLine($"attempting to open {fileinfo.Name}");
+                    Process.Start(fileinfo.FullName);
+                };
                 SessionLogs.Items.Add(menuItem);
             }
             if (Properties.Settings.Default.LogToClipboard) {
-                encounterlog.WriteClipboard();
+                EncounterLog.WriteClipboard();
             }
+            // 初期化
             Console.WriteLine("Reinitializing log");
-            encounterlog = new Log(Properties.Settings.Default.Path);
-            UpdateForm(null, null);
+            EncounterLog = new Log(Properties.Settings.Default.Path);
+            UpdateFormImpl();
         }
 
-        public void EndEncounterNoLogImpl(object sender, EventArgs e) {
+        public void EndEncounterNoLogImpl() {
             Console.WriteLine("Ending encounter (no log)");
-            bool temp = Properties.Settings.Default.AutoEndEncounters;
-            Properties.Settings.Default.AutoEndEncounters = false;
-            UpdateForm(null, null);
-            Properties.Settings.Default.AutoEndEncounters = temp;
+            EncounterLog.UpdateLog();
             Console.WriteLine("Reinitializing log");
-            lastStatus = "";
-            encounterlog = new Log(Properties.Settings.Default.Path);
-            UpdateForm(null, null);
+            EncounterLog = new Log(Properties.Settings.Default.Path);
+            LastStatus = "";
+            UpdateFormImpl();
         }
 
         private void AlwaysOnTopImpl(object sender, EventArgs e) {
@@ -449,12 +443,6 @@ namespace OverParse
             }
         }
 
-        private void OpenRecentLog_Click(object sender, RoutedEventArgs e) {
-            var filename = sessionLogFilenames[SessionLogs.Items.IndexOf((e.OriginalSource as MenuItem))];
-            Console.WriteLine($"attempting to open {filename}");
-            Process.Start($"{Directory.GetCurrentDirectory()}\\{filename}");
-        }
-
         private void CloseButton_Click(object sender, RoutedEventArgs e) {
             Close();
         }
@@ -473,10 +461,10 @@ namespace OverParse
         }
 
         private void CheckForNewLog(object sender, EventArgs e) {
-            var log = encounterlog.LatestLogfile();
-            if (log != null && log.Name != encounterlog.Filename) {
+            var log = EncounterLog.LatestDamagelog();
+            if (log != null && log.Name != EncounterLog.Filename) {
                 Console.WriteLine($"Found a new log file ({log.Name}), switching...");
-                encounterlog = new Log(Properties.Settings.Default.Path);
+                EncounterLog = new Log(Properties.Settings.Default.Path);
             }
         }
 
@@ -490,10 +478,10 @@ namespace OverParse
         private void LogMenu_Click(object sender, RoutedEventArgs e) {
             switch (((MenuItem)sender).Name) {
             case nameof(EndEncounter):
-                EndEncounterImpl(sender, e);
+                EndEncounterImpl();
                 break;
             case nameof(EndEncounterNoLog):
-                EndEncounterNoLogImpl(sender, e);
+                EndEncounterNoLogImpl();
                 break;
             case nameof(AutoEndEncounters):
                 Properties.Settings.Default.AutoEndEncounters = AutoEndEncounters.IsChecked;
@@ -534,42 +522,46 @@ namespace OverParse
             switch (((MenuItem)sender).Name) {
             case nameof(SeparateZanverse):
                 Properties.Settings.Default.SeparateZanverse = SeparateZanverse.IsChecked;
-                UpdateForm(null, null);
+                UpdateFormImpl();
                 break;
             case nameof(SeparateTurret):
                 Properties.Settings.Default.SeparateTurret = SeparateTurret.IsChecked;
-                UpdateForm(null, null);
+                UpdateFormImpl();
                 break;
             case nameof(SeparateAIS):
                 Properties.Settings.Default.SeparateAIS = SeparateAIS.IsChecked;
                 HideAIS.IsEnabled = SeparateAIS.IsChecked;
                 HidePlayers.IsEnabled = SeparateAIS.IsChecked;
-                UpdateForm(null, null);
+                UpdateFormImpl();
                 break;
             case nameof(HidePlayers):
+                Properties.Settings.Default.HidePlayers = HidePlayers.IsChecked;
                 if (HidePlayers.IsChecked) {
+                    Properties.Settings.Default.HideAIS = false;
                     HideAIS.IsChecked = false;
                 }
-                UpdateForm(null, null);
+                UpdateFormImpl();
                 break;
             case nameof(HideAIS):
+                Properties.Settings.Default.HideAIS = HideAIS.IsChecked;
                 if (HideAIS.IsChecked) {
+                    Properties.Settings.Default.HidePlayers = false;
                     HidePlayers.IsChecked = false;
                 }
-                UpdateForm(null, null);
+                UpdateFormImpl();
                 break;
             case nameof(ShowRawDPS):
                 Properties.Settings.Default.ShowRawDPS = ShowRawDPS.IsChecked;
                 DPSColumn.Header = ShowRawDPS.IsChecked ? "DPS" : "%";
-                UpdateForm(null, null);
+                UpdateFormImpl();
                 break;
             case nameof(ShowDamageGraph):
                 Properties.Settings.Default.ShowDamageGraph = ShowDamageGraph.IsChecked;
-                UpdateForm(null, null);
+                UpdateFormImpl();
                 break;
             case nameof(AnonymizeNames):
                 Properties.Settings.Default.AnonymizeNames = AnonymizeNames.IsChecked;
-                UpdateForm(null, null);
+                UpdateFormImpl();
                 break;
             }
         }
@@ -588,11 +580,11 @@ namespace OverParse
                 } else {
                     MaxHitHelperColumn.Width = new GridLength(3, GridUnitType.Star);
                 }
-                UpdateForm(null, null);
+                UpdateFormImpl();
                 break;
             case nameof(HighlightYourDamage):
                 Properties.Settings.Default.HighlightYourDamage = HighlightYourDamage.IsChecked;
-                UpdateForm(null, null);
+                UpdateFormImpl();
                 break;
             case nameof(WinOpacity_0):
                 Properties.Settings.Default.WindowOpacity = 0.00;
@@ -658,7 +650,7 @@ namespace OverParse
         private void DebugMenu_Click(object sender, RoutedEventArgs e) {
             switch (((MenuItem)sender).Name) {
             case nameof(GenerateFakeEntries):
-                encounterlog.GenerateFakeEntries();
+                EncounterLog.GenerateFakeEntries();
                 break;
             case nameof(WindowStats):
                 var result = new StringBuilder();
@@ -672,7 +664,22 @@ namespace OverParse
                 MessageBox.Show(result.ToString());
                 break;
             case nameof(CurrentLogFilename):
-                MessageBox.Show(encounterlog.Filename);
+                MessageBox.Show(EncounterLog.Filename);
+                break;
+            case nameof(ReadDamagelogOffset):
+                var begin = Properties.Settings.Default.DebugReadBegin;
+                var end = Properties.Settings.Default.DebugReadEnd;
+                var input = Microsoft.VisualBasic.Interaction.InputBox("{begin},{end}", "OverParse", (begin == 0 && end == 0) ? "" : $"{begin},{end}");
+                var values = input.Split(',').Select(s => s.Trim()).ToList();
+                if (values.Count() == 2 && int.TryParse(values[0], out begin) && int.TryParse(values[1], out end) && begin > 0 && end >= begin) {
+                    Properties.Settings.Default.DebugReadBegin = begin;
+                    Properties.Settings.Default.DebugReadEnd = end;
+                    ReadDamagelogOffset.Header = $"Line: {begin}-{end}";
+                } else {
+                    Properties.Settings.Default.DebugReadBegin = 0;
+                    Properties.Settings.Default.DebugReadEnd = 0;
+                    ReadDamagelogOffset.Header = "Line: All";
+                }
                 break;
             }
         }
@@ -690,15 +697,15 @@ namespace OverParse
                 break;
             case nameof(ResetLogFolder):
                 Properties.Settings.Default.Path = "Z:\\OBVIOUSLY\\BROKEN\\DEFAULT\\PATH";
-                EndEncounterNoLogImpl(this, null);
+                EndEncounterNoLogImpl();
                 break;
             case nameof(PluginUpdate):
                 if (Properties.Settings.Default.LaunchMethod == "Tweaker") {
                     MessageBox.Show(Properties.Resources.E0006);
                     return;
                 }
-                encounterlog.UpdatePlugin(Properties.Settings.Default.Path);
-                EndEncounterNoLogImpl(this, null);
+                EncounterLog.UpdatePlugin(Properties.Settings.Default.Path);
+                EndEncounterNoLogImpl();
                 break;
             case nameof(Reset):
                 var result = MessageBox.Show(Properties.Resources.I0002, "OverParse Setup", MessageBoxButton.YesNo, MessageBoxImage.Information);

@@ -15,7 +15,7 @@ namespace OverParse
 
         public bool Empty { get; private set; } = false;
         public bool Valid { get; private set; } = true;
-        public bool Runnint { get; private set; } = false;
+        public bool Running { get; private set; } = false;
 
         public int TimestampBeg { get; private set; } = 0;
         public int TimestampEnd { get; private set; } = 0;
@@ -37,8 +37,8 @@ namespace OverParse
             }
 
             // ログファイルの読込み準備
-            var log = LatestLogfile();
-            var stream = File.Open(LatestLogfile().FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            var log = LatestDamagelog();
+            var stream = File.Open(LatestDamagelog().FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
             stream.Seek(0, SeekOrigin.Begin);
             LogReader = new StreamReader(stream);
             Console.WriteLine($"Reading from {log.FullName}");
@@ -55,62 +55,69 @@ namespace OverParse
             }
         }
 
-        public FileInfo LatestLogfile() {
-            if (!Directory.Exists || !Directory.GetFiles().Any()) {
-                return null;
-            }
-            var re = new Regex(@"\d+\.csv");
-            return Directory.GetFiles().Where(f => re.IsMatch(f.Name)).OrderByDescending(f => f.Name).First();
+        public FileInfo LatestDamagelog() {
+            return Damagelogs().LastOrDefault();
         }
 
-        public void UpdateLog(object sender, EventArgs e) {
+        public IEnumerable<FileInfo> Damagelogs() {
+            if (!Directory.Exists || !Directory.GetFiles().Any()) {
+                return Enumerable.Empty<FileInfo>();
+            }
+            var re = new Regex(@"\d+\.csv");
+            return Directory.GetFiles().Where(f => re.IsMatch(f.Name)).OrderBy(f => f.Name);
+        }
+
+        public void DebugLoadLog(FileInfo file, int beg, int end) {
+            var dumps = File.ReadLines(file.FullName).Where(l => l.Length > 0).Select(l => new DamageDump(l));
+            if (beg != 0 || end != 0) {
+                var line = 0;
+                dumps = dumps.Where(dump => {
+                    line += 1;
+                    return dump.IsCurrentPlayerIdData() || (line >= beg && line <= end);
+                });
+            }
+            UpdateLogInternal(dumps);
+        }
+
+        public void UpdateLog() {
             if (!Valid || Empty) {
                 return;
             }
-
             var lines = LogReader.ReadToEnd().Split('\n');
             var dumps = lines.Where(l => l.Length > 0).Select(l => new DamageDump(l));
+            UpdateLogInternal(dumps);
+        }
 
+        private void UpdateLogInternal(IEnumerable<DamageDump> dumps) {
             foreach (var dump in dumps) {
-                // プレイヤーIDの取得
                 if (dump.IsCurrentPlayerIdData()) {
                     Hacks.currentPlayerID = dump.SourceID;
                     Console.WriteLine($"Found new active player ID: {dump.SourceID}");
                     continue;
                 }
-
-                // 意味あるんかなこれ？
                 if (!instances.Contains(dump.InstanceID)) {
                     instances.Add(dump.InstanceID);
                 }
-
-                // 無効なダメージ(0以下等)を除外
                 if (dump.IsInvalidDamageData()) {
                     continue;
                 }
-
-                // 
                 var source = Combatants.Where(c => c.ID == dump.SourceID && c.IsDefault).FirstOrDefault();
                 if (source == null) {
                     source = new Combatant(dump.SourceID, dump.SourceName);
                     Combatants.Add(source);
                 }
-
-                //
                 TimestampEnd = int.Parse(dump.Timestamp);
                 if (TimestampBeg == 0) {
                     Console.WriteLine($"FIRST ATTACK RECORDED: {dump.Damage} dmg from {dump.SourceID} ({dump.SourceName}) with {dump.AttackID}, to {dump.TargetID} ({dump.TargetName})");
                     TimestampBeg = TimestampEnd;
                 }
-
-                //
                 source.Attacks.Add(new Attack(dump, Elapse));
-                Runnint = true;
+                Running = true;
             }
             Combatants.Sort((x, y) => y.Damage.CompareTo(x.Damage));
         }
 
-        public string WriteLog() {
+        public FileInfo WriteLog() {
             Console.WriteLine("Logging encounter information to file");
 
             // Debug for ID mapping
@@ -122,7 +129,8 @@ namespace OverParse
             }
 
             // データがないよー
-            if (!Combatants.Any()) {
+            var work = Combatants.Separate().ToList();
+            if (!work.Any()) {
                 return null;
             }
 
@@ -133,14 +141,14 @@ namespace OverParse
             log.AppendLine();
 
             // 一覧(基本)
-            foreach (var c in Combatants.Where(c => c.IsAlly).Select(c => new Combatant.LogBinder(c))) {
+            foreach (var c in work.Select(c => new Combatant.LogBinder(c))) {
                 log.AppendLine(c.NormalLine);
             }
             log.AppendLine();
             log.AppendLine();
 
             // 一覧(詳細)
-            foreach (var c in Combatants.Where(c => c.IsAlly)) {
+            foreach (var c in work) {
                 log.AppendLine($"###### {c.Name} - {c.Damage:#,0} dmg ({c.Contribute:0.0%}) ######");
                 log.AppendLine();
 
@@ -170,8 +178,9 @@ namespace OverParse
 
             // 出力
             System.IO.Directory.CreateDirectory($"Logs/{now.ToString("yyyy-MM-dd")}");
-            File.WriteAllText($"Logs/{now.ToString("yyyy-MM-dd")}/OverParse - {now.ToString("yyyy-MM-dd_HH-mm-ss")}.txt", log.ToString());
-            return Filename;
+            var fileinfo = new FileInfo($"Logs/{now.ToString("yyyy-MM-dd")}/OverParse - {now.ToString("yyyy-MM-dd_HH-mm-ss")}.txt");
+            File.WriteAllText(fileinfo.FullName, log.ToString());
+            return fileinfo;
         }
 
         public void WriteClipboard() {
@@ -210,7 +219,7 @@ namespace OverParse
             if (Empty) {
                 return "No logs: Enable plugin and check pso2_bin!";
             }
-            if (!Runnint) {
+            if (!Running) {
                 return "Waiting for combat data...";
             }
             return "00:00 - ∞ DPS";
@@ -232,7 +241,7 @@ namespace OverParse
             Combatants.Sort((x, y) => y.DPS.CompareTo(x.DPS));
 
             Valid = true;
-            Runnint = true;
+            Running = true;
         }
 
         private void SetupEnvironment(string attemptDirectory) {

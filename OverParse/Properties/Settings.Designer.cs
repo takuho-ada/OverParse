@@ -394,5 +394,53 @@ namespace OverParse.Properties {
                 this["SeparateTurret"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool HideAIS {
+            get {
+                return ((bool)(this["HideAIS"]));
+            }
+            set {
+                this["HideAIS"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool HidePlayers {
+            get {
+                return ((bool)(this["HidePlayers"]));
+            }
+            set {
+                this["HidePlayers"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int DebugReadBegin {
+            get {
+                return ((int)(this["DebugReadBegin"]));
+            }
+            set {
+                this["DebugReadBegin"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int DebugReadEnd {
+            get {
+                return ((int)(this["DebugReadEnd"]));
+            }
+            set {
+                this["DebugReadEnd"] = value;
+            }
+        }
     }
 }

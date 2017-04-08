@@ -25,12 +25,16 @@ namespace OverParse.Models
         public static float MaxShare { get; private set; } = 0;
         private static Dictionary<string, string> users = new Dictionary<string, string>();
 
+        public override string ToString() {
+            return $"{base.ToString()} - ID: {ID}, Name: {Name}, Type: {Type}, Attacks: {Attacks.Count}";
+        }
+
         public static void Update(IEnumerable<Combatant> combatants) {
             var work = combatants.Where(c => c.IsAlly).ToList();
             if (work.Any()) {
                 ActiveTime = work.Max(c => c.Attacks.Max(a => a.Elapse));
                 TotalDamage = work.Sum(c => c.Damage);
-                MaxShare = work.Where(c => c.IsPlayer).Max(c => c.Damage);
+                MaxShare = work.Where(c => c.IsPlayer).Any() ? work.Where(c => c.IsPlayer).Max(c => c.Damage) : 0;
             } else {
                 ActiveTime = 0;
                 TotalDamage = 0;
@@ -178,16 +182,19 @@ namespace OverParse.Models
 
     public static class CombatantExtentions
     {
-        public static IList<Combatant> Separate(this IEnumerable<Combatant> combatants) {
+        public static IEnumerable<Combatant> Separate(this IEnumerable<Combatant> combatants) {
             return combatants.WithoutSeparated()
                 .Concat(combatants.AISCombatants())
                 .OrderByDescending(c => c.Damage)
                 .Concat(combatants.TurretCombatants())
                 .Concat(combatants.ZanverseCombatants())
-                .ToList();
+                .Where(c => c.IsAlly); // 味方分のみ
         }
 
         private static IEnumerable<Combatant> WithoutSeparated(this IEnumerable<Combatant> combatants) {
+            if (Properties.Settings.Default.SeparateAIS && Properties.Settings.Default.HidePlayers) {
+                yield break;
+            }
             foreach (var c in combatants) {
                 var result = new Combatant(c.ID, c.Name, c.Type);
                 result.Attacks = c.Attacks.WithoutSeparated().ToList();
@@ -196,7 +203,7 @@ namespace OverParse.Models
         }
 
         private static IEnumerable<Combatant> AISCombatants(this IEnumerable<Combatant> combatants) {
-            if (!Properties.Settings.Default.SeparateAIS) {
+            if (!Properties.Settings.Default.SeparateAIS || Properties.Settings.Default.HideAIS) {
                 yield break;
             }
             foreach (var c in combatants.Where(c => c.AISDamage > 0)) {
