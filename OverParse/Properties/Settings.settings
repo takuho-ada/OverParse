@@ -107,5 +107,8 @@
     <Setting Name="SkillLanguage" Type="System.String" Scope="User">
       <Value Profile="(Default)">EN</Value>
     </Setting>
+    <Setting Name="HideEnemies" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

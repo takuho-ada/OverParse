@@ -31,15 +31,9 @@ namespace OverParse.Models
 
         public static void Update(IEnumerable<Combatant> combatants) {
             var work = combatants.Where(c => c.IsAlly).ToList();
-            if (work.Any()) {
-                ActiveTime = work.Max(c => c.Attacks.Max(a => a.Elapse));
-                TotalDamage = work.Sum(c => c.Damage);
-                MaxShare = work.Where(c => c.IsPlayer).Any() ? work.Where(c => c.IsPlayer).Max(c => c.Damage) : 0;
-            } else {
-                ActiveTime = 0;
-                TotalDamage = 0;
-                MaxShare = 0;
-            }
+            ActiveTime = work.ActiveTime();
+            TotalDamage = work.TotalDamage();
+            MaxShare = work.MaxShare();
         }
 
         public Combatant(string id, string name, TypeEnum temp) {
@@ -201,23 +195,58 @@ namespace OverParse.Models
 
     public static class CombatantExtentions
     {
+        public static int ActiveTime(this IEnumerable<Combatant> combatants) {
+            if (combatants.Any()) {
+                return combatants.Max(c => {
+                    if (c.Attacks.Any()) {
+                        return c.Attacks.Max(a => a.Elapse);
+                    } else {
+                        return 0;
+                    }
+                });
+            } else {
+                return 0;
+            }
+        }
+
+        public static int TotalDamage(this IEnumerable<Combatant> combatants) {
+            return combatants.Sum(c => c.Damage);
+        }
+
+        public static int MaxShare(this IEnumerable<Combatant> combatants) {
+            if (combatants.Any()) {
+            return combatants.Max(c => c.IsPlayer ? c.Damage : 0);
+            } else {
+                return 0;
+            }
+        }
+
         public static IEnumerable<Combatant> Separate(this IEnumerable<Combatant> combatants) {
             return combatants.WithoutSeparated()
                 .Concat(combatants.AISCombatants())
                 .OrderByDescending(c => c.Damage)
                 .Concat(combatants.TurretCombatants())
                 .Concat(combatants.ZanverseCombatants())
-                .Where(c => c.IsAlly); // 味方分のみ
+                .Concat(combatants.EnemyCombatants().OrderBy(c => c.ID));
         }
 
         private static IEnumerable<Combatant> WithoutSeparated(this IEnumerable<Combatant> combatants) {
             if (Properties.Settings.Default.SeparateAIS && Properties.Settings.Default.HidePlayers) {
                 yield break;
             }
-            foreach (var c in combatants) {
+            foreach (var c in combatants.Where(c => c.IsPlayer)) {
                 var result = new Combatant(c.ID, c.Name, c.Type);
                 result.Attacks = c.Attacks.WithoutSeparated().ToList();
                 yield return result;
+            }
+        }
+
+        private static IEnumerable<Combatant> EnemyCombatants(this IEnumerable<Combatant> combatants) {
+            if (Properties.Settings.Default.HideEnemies) {
+                yield break;
+            }
+            foreach (var c in combatants.Where(c => !c.IsAlly)) {
+                yield return c;
             }
         }
 
@@ -225,7 +254,7 @@ namespace OverParse.Models
             if (!Properties.Settings.Default.SeparateAIS || Properties.Settings.Default.HideAIS) {
                 yield break;
             }
-            foreach (var c in combatants.Where(c => c.AISDamage > 0)) {
+            foreach (var c in combatants.Where(c => c.IsPlayer && c.AISDamage > 0)) {
                 var result = new Combatant(c.ID, $"AIS|{c.Name}", Combatant.TypeEnum.IS_AIS);
                 result.Attacks = c.Attacks.Where(a => a.IsAIS).ToList();
                 yield return result;

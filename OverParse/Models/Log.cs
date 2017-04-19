@@ -7,14 +7,14 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows;
 
-namespace OverParse
+namespace OverParse.Models
 {
     public class Log
     {
         private const int pluginVersion = 4;
 
-        public bool Empty { get; private set; } = false;
-        public bool Valid { get; private set; } = true;
+        public bool Empty { get; private set; } = true;
+        public bool Valid { get; private set; } = false;
         public bool Running { get; private set; } = false;
 
         public int TimestampBeg { get; private set; } = 0;
@@ -38,7 +38,7 @@ namespace OverParse
 
             // ログファイルの読込み準備
             var log = LatestDamagelog();
-            var stream = File.Open(LatestDamagelog().FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            var stream = File.Open(log.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
             stream.Seek(0, SeekOrigin.Begin);
             LogReader = new StreamReader(stream);
             Console.WriteLine($"Reading from {log.FullName}");
@@ -68,15 +68,17 @@ namespace OverParse
         }
 
         public void DebugLoadLog(FileInfo file, int beg, int end) {
-            var dumps = File.ReadLines(file.FullName).Where(l => l.Length > 0).Select(l => new DamageDump(l));
-            if (beg != 0 || end != 0) {
-                var line = 0;
-                dumps = dumps.Where(dump => {
-                    line += 1;
-                    return dump.IsCurrentPlayerIdData() || (line >= beg && line <= end);
-                });
+            using (var reader = new StreamReader(file.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite))) {
+                var dumps = reader.ReadToEnd().Split('\n').Where(l => l.Length > 0).Select(l => new DamageDump(l));
+                if (beg != 0 || end != 0) {
+                    var line = 0;
+                    dumps = dumps.Where(dump => {
+                        line += 1;
+                        return dump.IsCurrentPlayerIdData() || (line >= beg && line <= end);
+                    });
+                }
+                UpdateLogInternal(dumps);
             }
-            UpdateLogInternal(dumps);
         }
 
         public void UpdateLog() {

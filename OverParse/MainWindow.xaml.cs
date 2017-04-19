@@ -101,6 +101,7 @@ namespace OverParse
             Console.WriteLine($"{nameof(SeparateAIS)}        : {SeparateAIS.IsChecked = Properties.Settings.Default.SeparateAIS}");
             Console.WriteLine($"{nameof(HidePlayers)}        : {HidePlayers.IsChecked = Properties.Settings.Default.HidePlayers}");
             Console.WriteLine($"{nameof(HideAIS)}            : {HideAIS.IsChecked = Properties.Settings.Default.HideAIS}");
+            Console.WriteLine($"{nameof(HideEnemies)}        : {HideEnemies.IsChecked = Properties.Settings.Default.HideEnemies}");
             Console.WriteLine($"{nameof(ShowRawDPS)}         : {ShowRawDPS.IsChecked = Properties.Settings.Default.ShowRawDPS}");
             Console.WriteLine($"{nameof(ShowDamageGraph)}    : {ShowDamageGraph.IsChecked = Properties.Settings.Default.ShowDamageGraph}");
             Console.WriteLine($"{nameof(AnonymizeNames)}     : {AnonymizeNames.IsChecked = Properties.Settings.Default.AnonymizeNames}");
@@ -145,26 +146,27 @@ namespace OverParse
             // ショートカットキーの設定
             Console.WriteLine("Initializing hotkeys");
             try {
+                var modifier = ModifierKeys.Control | ModifierKeys.Shift;
                 // Ctrl + Shift + E => DPS計測の終了(ログ出力)
-                HotkeyManager.Current.AddOrReplace("End Encounter", Key.E, ModifierKeys.Control | ModifierKeys.Shift, (sender, e) => {
+                HotkeyManager.Current.AddOrReplace("End Encounter", Key.E, modifier, (sender, e) => {
                     Console.WriteLine("Encounter hotkey pressed");
                     EndEncounterImpl();
                     e.Handled = true;
                 });
                 // Ctrl + Shift + R => DPS計測のリセット(ログ出力なし)
-                HotkeyManager.Current.AddOrReplace("End Encounter (No log)", Key.R, ModifierKeys.Control | ModifierKeys.Shift, (sender, e) => {
+                HotkeyManager.Current.AddOrReplace("End Encounter (No log)", Key.R, modifier, (sender, e) => {
                     Console.WriteLine("Encounter hotkey (no log) pressed");
                     EndEncounterNoLogImpl();
                     e.Handled = true;
                 });
                 // Ctrl + Shift + E => デバッグメニュー表示切替え
-                HotkeyManager.Current.AddOrReplace("Debug Menu", Key.F11, ModifierKeys.Control | ModifierKeys.Shift, (sender, e) => {
+                HotkeyManager.Current.AddOrReplace("Debug Menu", Key.F11, modifier, (sender, e) => {
                     Console.WriteLine("Debug hotkey pressed");
                     DebugMenu.Visibility = (DebugMenu.Visibility == Visibility.Visible) ? Visibility.Collapsed : Visibility.Visible;
                     e.Handled = true;
                 });
                 // Ctrl + Shift + A => 最前面表示トグル
-                HotkeyManager.Current.AddOrReplace("Always On Top", Key.A, ModifierKeys.Control | ModifierKeys.Shift, (sender, e) => {
+                HotkeyManager.Current.AddOrReplace("Always On Top", Key.A, modifier, (sender, e) => {
                     Console.WriteLine("Always-on-top hotkey pressed");
                     AlwaysOnTop.IsChecked = !AlwaysOnTop.IsChecked;
                     IntPtr wasActive = WindowsServices.GetForegroundWindow();
@@ -203,7 +205,11 @@ namespace OverParse
             foreach (var file in EncounterLog.Damagelogs()) {
                 var item = new MenuItem() { Header = file.Name };
                 item.Click += (sender, e) => {
-                    EncounterLog.DebugLoadLog(file, Properties.Settings.Default.DebugReadBegin, Properties.Settings.Default.DebugReadEnd);
+                    if (file.Exists) {
+                        EncounterLog.DebugLoadLog(file, Properties.Settings.Default.DebugReadBegin, Properties.Settings.Default.DebugReadEnd);
+                    } else {
+                        ReadDamagelog.Items.Remove(sender);
+                    }
                 };
                 ReadDamagelog.Items.Add(item);
             }
@@ -222,43 +228,38 @@ namespace OverParse
             SetTimer(new EventHandler(CheckForNewLog), TimeSpan.FromSeconds(10));                 // ログファイルの更新チェック(10秒毎)
 
             // 更新の確認(あとで)
-            Console.WriteLine("Checking for release updates");
-            try {
-                HttpWebRequest request = (HttpWebRequest)WebRequest.Create("https://api.github.com/repos/tyronesama/overparse/releases/latest");
-                request.UserAgent = "OverParse";
-                WebResponse response = request.GetResponse();
-                Stream dataStream = response.GetResponseStream();
-                StreamReader reader = new StreamReader(dataStream);
-                string responseFromServer = reader.ReadToEnd();
-                reader.Close();
-                response.Close();
-                JObject responseJSON = JObject.Parse(responseFromServer);
-                string responseVersion = Version.Parse(responseJSON["tag_name"].ToString()).ToString();
-                string thisVersion = Assembly.GetExecutingAssembly().GetName().Version.ToString();
-
-                while (thisVersion.Substring(Math.Max(0, thisVersion.Length - 2)) == ".0") {
-                    thisVersion = thisVersion.Substring(0, thisVersion.Length - 2);
-                }
-
-                while (responseVersion.Substring(Math.Max(0, responseVersion.Length - 2)) == ".0") {
-                    responseVersion = responseVersion.Substring(0, responseVersion.Length - 2);
-                }
-
-                Console.WriteLine($"JSON version: {responseVersion} / Assembly version: {thisVersion}");
-                if (responseVersion != thisVersion) {
-                    var message = string.Format(Properties.Resources.I0001, thisVersion, responseVersion);
-                    MessageBoxResult result = MessageBox.Show(message, "OverParse Update", MessageBoxButton.YesNo, MessageBoxImage.Information);
-                    if (result == MessageBoxResult.Yes) {
-                        Process.Start("https://github.com/TyroneSama/OverParse/releases/latest");
-                        Environment.Exit(-1);
-                    }
-                }
-            } catch (Exception ex) {
-                Console.WriteLine($"Failed to update check: {ex.ToString()}");
-            }
+            VersionCheck();
 
             // 初期化終了
             Console.WriteLine("End of MainWindow constructor");
+        }
+
+        private void VersionCheck() {
+            Console.WriteLine("Checking for release updates");
+            try {
+                const string url = "https://api.github.com/repos/tyronesama/overparse/releases/latest";
+                var request = (HttpWebRequest)WebRequest.Create(url);
+                request.UserAgent = "OverParse";
+                request.GetResponseAsync().ContinueWith(task => {
+                    var response = task.Result;
+                    using (var reader = new StreamReader(response.GetResponseStream())) {
+                        var json = JObject.Parse(reader.ReadToEnd());
+                        var newVersion = Version.Parse(json["tag_name"].ToString());
+                        var nowVersion = Assembly.GetExecutingAssembly().GetName().Version;
+                        Console.WriteLine($"JSON version: {newVersion} / Assembly version: {nowVersion}");
+                        if (newVersion > nowVersion) {
+                            var message = string.Format(Properties.Resources.I0001, nowVersion, newVersion);
+                            MessageBoxResult result = MessageBox.Show(message, "OverParse Update", MessageBoxButton.YesNo, MessageBoxImage.Information);
+                            if (result == MessageBoxResult.Yes) {
+                                Process.Start("https://github.com/TyroneSama/OverParse/releases/latest");
+                                Environment.Exit(-1);
+                            }
+                        }
+                    }
+                });
+            } catch (Exception e) {
+                Console.WriteLine($"Failed to update check: {e}");
+            }
         }
 
         // ***** ウィンドウイベント ***** //
@@ -376,6 +377,7 @@ namespace OverParse
             Console.WriteLine("Ending encounter");
             EncounterLog.UpdateLog();
             if (!EncounterLog.Running) {
+                LastCombatants = Enumerable.Empty<Combatant>().ToList();
                 return;
             }
             Console.WriteLine("Saving last combatant list");
@@ -389,7 +391,11 @@ namespace OverParse
                 var menuItem = new MenuItem() { Header = fileinfo.Name };
                 menuItem.Click += (sender, e) => {
                     Console.WriteLine($"attempting to open {fileinfo.Name}");
-                    Process.Start(fileinfo.FullName);
+                    if (fileinfo.Exists) {
+                        Process.Start(fileinfo.FullName);
+                    } else {
+                        SessionLogs.Items.Remove(sender);
+                    }
                 };
                 SessionLogs.Items.Add(menuItem);
             }
@@ -551,6 +557,10 @@ namespace OverParse
                     Properties.Settings.Default.HidePlayers = false;
                     HidePlayers.IsChecked = false;
                 }
+                UpdateFormImpl();
+                break;
+            case nameof(HideEnemies):
+                Properties.Settings.Default.HideEnemies = HideEnemies.IsChecked;
                 UpdateFormImpl();
                 break;
             case nameof(ShowRawDPS):

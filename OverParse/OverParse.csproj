@@ -128,7 +128,7 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Models\Combatant.cs" />
-    <Compile Include="Log.cs" />
+    <Compile Include="Models\Log.cs" />
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>

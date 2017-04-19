@@ -74,6 +74,7 @@
                     <DockPanel HorizontalAlignment="Left">
                         <Image x:Name="image" Height="16" VerticalAlignment="Top" Width="16" Source="pa_0105.ico" MouseDown="Window_MouseDown" ToolTip="Drag me!"/>
                         <Menu x:Name="MenuBar" DockPanel.Dock="Top" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Height="16">
+                            <!-- Menu: Logging -->
                             <MenuItem Style="{StaticResource topmenu}" x:Name="MenuSystem" Background="Transparent" Header="Logging">
                                 <MenuItem Style="{StaticResource submenu}" x:Name="EndEncounter"      Header="End encounter"     InputGestureText="Ctrl+Shift+E" Click="LogMenu_Click"/>
                                 <MenuItem Style="{StaticResource submenu}" x:Name="EndEncounterNoLog" Header="Discard encounter" InputGestureText="Ctrl+Shift+R" Click="LogMenu_Click"/>
@@ -86,6 +87,7 @@
                                     <MenuItem Style="{StaticResource submenu}" x:Name="SessionLogPlaceholder" Header="No logs recorded in this session." IsEnabled="False"/>
                                 </MenuItem>
                             </MenuItem>
+                            <!-- Menu: Parsing -->
                             <MenuItem Style="{StaticResource topmenu}" Background="Transparent" Header="Parsing">
                                 <MenuItem Style="{StaticResource submenu}" x:Name="SeparateZanverse" IsCheckable="True" IsChecked="False" Header="Show Zanverse damage separately" Click="ParseMenu_Click"/>
                                 <MenuItem Style="{StaticResource submenu}" x:Name="SeparateTurret"   IsCheckable="True" IsChecked="False" Header="Show Turret damage separately"   Click="ParseMenu_Click"/>
@@ -96,6 +98,8 @@
                                     <MenuItem Style="{StaticResource submenu}" x:Name="HideAIS"     IsCheckable="True" IsChecked="False" Header="Hide AIS"     Click="ParseMenu_Click"/>
                                 </MenuItem>
                                 <Separator />
+                                <MenuItem Style="{StaticResource submenu}" x:Name="HideEnemies" IsCheckable="True" IsChecked="False" Header="Hide enemies damage" Click="ParseMenu_Click"/>
+                                <Separator />
                                 <MenuItem Style="{StaticResource submenu}" x:Name="ShowRawDPS"      IsCheckable="True" IsChecked="False" Header="Show raw DPS"      Click="ParseMenu_Click"/>
                                 <MenuItem Style="{StaticResource submenu}" x:Name="ShowDamageGraph" IsCheckable="True" IsChecked="False" Header="Show damage graph" Click="ParseMenu_Click"/>
                                 <MenuItem Style="{StaticResource submenu}" x:Name="AnonymizeNames"  IsCheckable="True" IsChecked="False" Header="Anonymize names"   Click="ParseMenu_Click"/>
@@ -105,6 +109,7 @@
                                     <MenuItem Style="{StaticResource submenu}" x:Name="SkillJA" IsCheckable="True" IsChecked="False" Header="Japanese" Click="ParseMenu_Click"/>
                                 </MenuItem>
                             </MenuItem>
+                            <!-- Menu: Window -->
                             <MenuItem Style="{StaticResource topmenu}" Background="Transparent" Header="Window">
                                 <MenuItem Style="{StaticResource submenu}" IsCheckable="True" IsChecked="True" Header="Compact mode"          x:Name="CompactMode"         Click="WindowMenu_Click"/>
                                 <MenuItem Style="{StaticResource submenu}" IsCheckable="True" IsChecked="True" Header="Highlight your damage" x:Name="HighlightYourDamage" Click="WindowMenu_Click"/>
@@ -127,6 +132,7 @@
                                 <MenuItem Style="{StaticResource submenu}" IsCheckable="True" IsChecked="False" Header="Auto-hide window"            x:Name="AutoHideWindow"   Click="WindowMenu_Click" />
                                 <MenuItem Style="{StaticResource submenu}" IsCheckable="True" IsChecked="False" Header="Clickthrough while inactive" x:Name="ClickthroughMode" Click="WindowMenu_Click" />
                             </MenuItem>
+                            <!-- Menu: Debug -->
                             <MenuItem Style="{StaticResource topmenu}" x:Name="DebugMenu" Visibility="Collapsed" Background="Transparent" Header="Debug">
                                 <MenuItem Style="{StaticResource submenu}" Header="Window stats"          x:Name="WindowStats"         Click="DebugMenu_Click"/>
                                 <MenuItem Style="{StaticResource submenu}" Header="Current log filename"  x:Name="CurrentLogFilename"  Click="DebugMenu_Click"/>
@@ -135,6 +141,7 @@
                                 </MenuItem>
                                 <MenuItem Style="{StaticResource submenu}" x:Name="ReadDamagelogOffset" Click="DebugMenu_Click"/>
                             </MenuItem>
+                            <!-- Menu: Help -->
                             <MenuItem Style="{StaticResource topmenu}" Background="Transparent" Header="Help">
                                 <MenuItem Style="{StaticResource submenu}" Header="About" x:Name="About" Click="HelpMenu_Click"/>
                                 <Separator />

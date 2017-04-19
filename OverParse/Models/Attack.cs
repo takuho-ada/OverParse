@@ -28,6 +28,7 @@ namespace OverParse.Models
             "3339644659", // Photon Particle Turret
         };
         private static readonly string ZanverseID = "2106601422";
+        private static readonly string PetDamageID = "3460765776";
         private static readonly SkillDictionary dic = SkillDictionary.GetInstance();
 
         public string ID => dump.AttackID;

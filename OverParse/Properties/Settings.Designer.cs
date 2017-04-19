@@ -442,5 +442,17 @@ namespace OverParse.Properties {
                 this["SkillLanguage"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool HideEnemies {
+            get {
+                return ((bool)(this["HideEnemies"]));
+            }
+            set {
+                this["HideEnemies"] = value;
+            }
+        }
     }
 }
